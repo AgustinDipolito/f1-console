@@ -1,6 +1,7 @@
 # Consola de carrera
 
 Juego web de carreras contra un bot en circuitos reales. El auto se maneja solo: vos operás su computadora.
+## Try it out at: https://agustindipolito.github.io/f1-console/
 
 ## Arrancar
 
