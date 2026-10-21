@@ -1,0 +1,317 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f5f1; --surface: #ffffff; --surface-2: #efede6;
+  --text: #2c2c2a; --muted: #6a6964; --border: rgba(0, 0, 0, 0.12); --radius: 8px;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--text); background: var(--bg);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1c1c1a; --surface: #242422; --surface-2: #2e2e2b;
+  --text: #e8e6df; --muted: #a3a19a; --border: rgba(255, 255, 255, 0.12);
+}
+* { box-sizing: border-box; }
+/* Sin rebote ni tirar para recargar: en el teléfono, un dedo que baja sobre el mapa recargaba la página en plena carrera. */
+html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overscroll-behavior: none; }
+/* El alto visible de verdad (dvh): con 100vh, la barra del navegador del teléfono tapaba los rotativos. */
+body { margin: 0; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overscroll-behavior: none; }
+.bar {
+  display: flex; gap: 8px; align-items: center; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left));
+}
+/* Lo que se toca no se selecciona ni abre el menú de la imagen al mantener apretado. */
+.bar, .layout { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.grow { flex: 1; }
+button, select, input[type="number"] {
+  font: inherit; font-size: 13px; height: 32px; padding: 0 12px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+}
+button { cursor: pointer; }
+@media (hover: hover) { button:hover { background: var(--surface-2); } }
+button:active { background: var(--surface-2); }
+/* Acción primaria de la pantalla: Largar, Revancha, Correr de nuevo. Mientras corre, Reiniciar vuelve a ser un botón común. */
+button.primary { background: var(--text); border-color: var(--text); color: var(--bg); font-weight: 500; }
+@media (hover: hover) { button.primary:hover { background: color-mix(in srgb, var(--text) 85%, var(--bg)); } }
+button.primary:active { background: color-mix(in srgb, var(--text) 85%, var(--bg)); }
+/* Acciones de la cabecera: en la computadora, solo el nombre; en el teléfono, ícono y nombre corto. */
+.act svg { display: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.act .short { display: none; }
+.layout {
+  flex: 1; display: grid; gap: 12px; min-height: 0; grid-template-columns: 1fr; grid-auto-rows: minmax(340px, 1fr); overflow: auto;
+  padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+.layout.side { grid-template-columns: 1fr 1.15fr; grid-auto-rows: 1fr; overflow: hidden; }
+/* Lado a lado desde 1100 px, y también en una tableta o ventana apaisada: apilada, la consola quedaba baja y chica. */
+@media (min-width: 1100px), (orientation: landscape) and (min-width: 900px) { .layout.auto { grid-template-columns: 1fr 1.15fr; grid-auto-rows: 1fr; overflow: hidden; } }
+.panel { display: flex; flex-direction: column; min-height: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+.panel-head { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.mono { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--text); }
+.canvas-box { position: relative; flex: 1; min-height: 0; }
+#console { cursor: grab; }
+.canvas-box canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* La consola es un instrumento: tocarla nunca desplaza la página. Un toque acciona en el acto y arrastrar inclina la vista. */
+#console canvas { touch-action: none; }
+.msg { font-size: 14px; min-height: 22px; }
+.hint { font-size: 12px; color: var(--muted); }
+/* Renglón propio de la carrera: arriba vuelta, puesto y deltas; abajo los tiempos. Dos renglones fijos: el mapa no salta al cambiar un número. */
+.race { display: flex; flex-direction: column; margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
+.race span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.35em; }
+#race-now { font-size: 13px; font-weight: 600; }
+#race-times { font-size: 12px; color: var(--muted); }
+.panel > .hint .for-touch { display: none; }
+@media (pointer: coarse) { .panel > .hint .for-touch { display: inline; } .panel > .hint .for-mouse { display: none; } }
+.labels { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.label { position: absolute; left: 0; top: 0; white-space: nowrap; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; line-height: 1.3; text-align: center; }
+.label .n { font-size: 11px; color: var(--muted); }
+.label .v { font-size: 12px; font-weight: 500; }
+.view-btns { position: absolute; top: 4px; right: 4px; display: flex; gap: 4px; z-index: 2; }
+.view-btns button { width: 32px; padding: 0; }
+dialog { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); max-width: 560px; width: calc(100% - 32px); padding: 16px 16px 0; }
+/* Los botones del diálogo quedan al pie aunque el contenido sea más alto que la pantalla (ajustes, o cualquiera en un teléfono apaisado). */
+dialog .actions {
+  position: sticky; bottom: 0; z-index: 1; flex-wrap: wrap; margin: 12px -16px 0; background: var(--surface);
+  border-top: 1px solid var(--border); padding: 10px 16px max(16px, env(safe-area-inset-bottom));
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+dialog h2 { font-size: 18px; font-weight: 500; margin: 0 0 8px; }
+dialog h3 { font-size: 14px; font-weight: 500; margin: 14px 0 4px; color: var(--muted); }
+.field { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; font-size: 14px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+.card { background: var(--surface-2); border-radius: var(--radius); padding: 8px 10px; font-size: 13px; }
+.card b { font-weight: 500; display: block; }
+.actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+button.mini { height: 24px; padding: 0 8px; font-size: 12px; margin-left: 6px; }
+.row { display: flex; gap: 6px; }
+input[type="text"] { font: inherit; font-size: 13px; height: 32px; padding: 0 10px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text); flex: 1; }
+dialog.wide { max-width: 640px; }
+.chart { width: 100%; height: auto; display: block; margin: 4px 0 10px; }
+.chart text { font-size: 11px; fill: var(--muted); }
+.chart .grid { stroke: var(--border); }
+.chart path { fill: none; stroke-width: 1.6; stroke-linejoin: round; }
+.chart .cur { stroke: var(--text); }
+.chart .ref { stroke: #378add; stroke-dasharray: 4 3; }
+.chart line.mark { stroke: var(--muted); stroke-dasharray: 2 3; }
+.chart text.mark { fill: var(--text); font-weight: 600; }
+.tot { font-size: 14px; margin: 0 0 6px; font-variant-numeric: tabular-nums; }
+.losses { margin: 4px 0 8px; padding-left: 22px; font-size: 13px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.legend { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sw { display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--text); }
+.sw.ref { border-top: 2px dashed #378add; margin-left: 8px; }
+.laps { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.laps th, .laps td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.laps th { font-weight: 500; color: var(--muted); }
+.label.hint { border-color: #378add; box-shadow: 0 0 0 1px #378add; }
+.label.hint .v { color: #1f6fbf; font-weight: 600; }
+:root[data-theme="dark"] .label.hint .v { color: #7fb6ec; }
+.tag { position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 11px; line-height: 1.2; padding: 1px 5px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); }
+.tag.mine { background: #378add; border-color: #378add; color: #fff; font-weight: 600; }
+.label.inline { transform-origin: 0 0; display: flex; gap: 5px; align-items: baseline; padding: 0 5px; background: transparent; border-width: 0; line-height: 1.1; }
+/* Encuadre del frente o caja chica: el tramo va en un renglón, sin su nombre (el valor ya dice «Recta → frenada…»). */
+.label.bare .n { display: none; }
+.label.inline .n { font-size: 10px; }
+.label.inline .v { font-size: 11px; font-variant-numeric: tabular-nums; }
+.label.inline.hint { background: var(--surface-2); }
+.label.inline.compact .n { display: none; }
+.tag.ghost { background: transparent; border-style: dashed; }
+.members { margin: 6px 0; padding-left: 18px; font-size: 14px; line-height: 1.6; }
+button:disabled { opacity: 0.5; cursor: default; }
+/* Ayuda: solapas, tramos, volante, alertas, mapa y teclas. */
+dialog.help { max-width: 760px; margin: 6vh auto auto; max-height: 88vh; }
+.help .lead { margin: 0 0 10px; max-width: 62ch; line-height: 1.5; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 12px; overflow-x: auto; }
+.tabs [role="tab"] { font-size: 14px; border: 0; border-radius: 0; background: none; color: var(--muted); padding: 0 12px; box-shadow: inset 0 -2px 0 transparent; }
+@media (max-width: 480px) { .tabs [role="tab"] { padding: 0 8px; } }
+@media (max-width: 360px) { .tabs [role="tab"] { padding: 0 3px; } }
+.tabs [role="tab"][aria-selected="true"] { color: var(--text); box-shadow: inset 0 -2px 0 var(--text); }
+.tabs [role="tab"]:focus-visible { outline: 2px solid #378add; outline-offset: -2px; }
+.pane { font-size: 14px; line-height: 1.5; }
+.help .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 560px) { .help .cards { grid-template-columns: 1fr; } }
+.pane p { max-width: 70ch; margin: 6px 0; }
+.card.seg { display: grid; grid-template-columns: 72px 1fr; gap: 12px; font-size: 14px; padding: 10px 12px; }
+.card.seg b { font-size: 14px; }
+.seg-svg { width: 72px; height: 40px; }
+.seg-svg path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.seg-rest { stroke: var(--border); stroke-width: 3; }
+.seg-on { stroke: var(--text); stroke-width: 4; }
+.card dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 8px; margin: 2px 0; }
+.card dt { color: var(--muted); }
+.card dd { margin: 0; font-weight: 500; }
+.wheel { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 640px) { .wheel { grid-template-columns: 1fr; } }
+.wheel-svg { width: 100%; height: auto; }
+.wheel-svg .body { fill: var(--surface-2); stroke: var(--text); stroke-width: 1.2; }
+.wheel-svg .part { fill: var(--surface); stroke: var(--text); stroke-width: 1; }
+.wheel-svg .ink { stroke: var(--text); stroke-width: 0.8; }
+.wheel-svg .thin { stroke-width: 0.5; opacity: 0.6; }
+.wheel-svg .badge circle { fill: var(--text); }
+.wheel-svg .badge text { fill: var(--surface); font-size: 9px; font-weight: 600; text-anchor: middle; }
+.parts { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+.wheel .hint { margin-top: 10px; }
+.parts b { font-weight: 500; display: block; }
+button.link { border: 0; background: none; padding: 0; height: auto; font-size: inherit; color: #1f6fbf; text-decoration: underline; }
+:root[data-theme="dark"] button.link { color: #7fb6ec; }
+.rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.rows > li { display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: start; }
+.rows b { font-weight: 500; display: block; }
+.lamp { width: 18px; height: 18px; border-radius: 50%; margin: 2px auto 0; border: 1px solid var(--text); }
+.gauge { width: 36px; height: 12px; margin-top: 5px; }
+.gauge line { stroke: var(--text); stroke-width: 1; }
+.gauge .needle { stroke-width: 2; }
+.steps { margin: 4px 0; padding-left: 20px; }
+.sw3 { display: flex; gap: 2px; margin-top: 8px; }
+.sw3 i { flex: 1; height: 4px; border-radius: 2px; }
+.swb { display: block; height: 10px; border-radius: 2px; margin-top: 5px; }
+.swg { width: 14px; height: 14px; border-radius: 50%; border: 1.5px dashed var(--muted); margin: 2px auto 0; }
+.swn { width: 18px; height: 18px; border-radius: 50%; background: var(--text); color: var(--surface); font-size: 12px; font-weight: 600; display: grid; place-items: center; margin: 1px auto 0; }
+.keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px 24px; }
+.key-row { display: grid; grid-template-columns: 104px 1fr; align-items: center; gap: 10px; }
+.key-row > span { display: flex; gap: 4px; }
+kbd { font: 500 12px ui-monospace, Menlo, Consolas, monospace; min-width: 26px; height: 26px; padding: 0 6px; display: inline-grid; place-items: center; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; background: var(--surface-2); color: var(--text); }
+.actions .grow { flex: 1; align-self: center; }
+/* Telemetría: encabezado con selector, tarjetas por sección, resumen por causa con barras. */
+dialog.tel { max-width: 760px; margin: 6vh auto auto; max-height: 88vh; }
+.thead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.thead h2 { margin: 0; }
+.pick { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.pick select { min-width: 120px; color: var(--text); }
+.tel select:focus-visible, .tel button:focus-visible { outline: 2px solid #378add; outline-offset: 1px; }
+.tcard { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; margin: 0 0 10px; }
+.tcard h3 { margin: 0 0 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
+.tcard .chart { margin: 4px 0 2px; }
+.tcard .legend { margin: 0 0 2px; }
+.tcard > .hint { margin: 2px 0 0; }
+.tel > form > .hint { margin: 0 2px 6px; line-height: 1.45; max-width: 70ch; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 10px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px; display: grid; gap: 1px; }
+.stat span { font-size: 12px; color: var(--muted); }
+.stat b { font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.stat.loss b { color: #b3261e; }
+:root[data-theme="dark"] .stat.loss b { color: #f2918a; }
+.causes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.causes li { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 56px; align-items: center; gap: 10px; font-size: 13px; }
+.causes .bar { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.causes .bar i { display: block; height: 100%; background: var(--text); border-radius: 3px; }
+.causes b { font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) {
+  .causes li { grid-template-columns: 1fr 52px; gap: 2px 8px; }
+  .causes .bar { grid-column: 1 / -1; grid-row: 2; }
+  .stat b { font-size: 16px; }
+  .stats { gap: 6px; }
+}
+.tel .losses { margin: 0; padding-left: 22px; display: grid; gap: 4px; }
+.scroll { overflow-x: auto; }
+.tel .laps tr.sel td { font-weight: 600; background: var(--surface); }
+.tel .laps tbody tr:last-child td { border-bottom: 0; }
+.empty { margin: 8px 0; color: var(--muted); }
+
+table.results { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.results th { text-align: left; font-weight: 500; color: var(--muted); padding: 4px 6px; }
+table.results td { padding: 5px 6px; border-top: 1px solid var(--border); }
+table.results tr.me td { font-weight: 600; }
+table.results .fast::before { content: " · "; }
+
+/* ——— Mapa en el volante: un solo panel. El mapa va sobre el vidrio de la pantalla (la consola le da tamaño y transformación)
+   y las lecturas de la pantalla pasan al HUD, en un renglón arriba del volante. Carrera arriba, el mensaje abajo. ——— */
+.layout.screen { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-auto-rows: auto; gap: 6px; overflow: hidden; }
+.layout.screen > .panel:first-child { display: contents; }
+.layout.screen .race { margin: 0; }
+.layout.screen > .panel:last-child { grid-row: 3; }
+.layout.screen #msg { grid-row: 4; }
+.layout.screen #track { position: absolute; left: 0; top: 0; flex: none; transform-origin: 0 0; pointer-events: none; background: var(--surface); border-radius: 3px; overflow: hidden; }
+.hud { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 14px; margin: 2px 0; }
+.hud .label.inline { position: static; padding: 0; }
+.hud .label .n { font-size: 11px; }
+.hud .label .v { font-size: 13px; }
+
+/* ——— Volante delante del mapa: el mapa ocupa todo el panel y sigue a tu auto, con la carrera escrita encima; el volante, sin fondo,
+   tapa la mitad de abajo y el auto va al 30 % de arriba. En el teléfono apaisado el volante tapa la mitad derecha y el auto va
+   a la izquierda (cockpitAt en main.ts). ——— */
+.layout.cockpit { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-auto-rows: auto; overflow: hidden; }
+.layout.cockpit > .panel { grid-area: 1 / 1; }
+.layout.cockpit > .panel:first-child { position: relative; overflow: hidden; }
+.layout.cockpit #track { position: absolute; inset: 0; }
+.layout.cockpit > .panel:first-child > :not(#track) { position: relative; z-index: 1; }
+.layout.cockpit > .panel:last-child { align-self: end; height: 55%; background: none; border: 0; z-index: 1; pointer-events: none; }
+.layout.cockpit > .panel:last-child > * { pointer-events: auto; }
+.layout.cockpit > .panel:last-child > .panel-head > span:first-child { visibility: hidden; }
+
+/* Teléfono: como en la automática, sin la cabecera del mapa (la vista 3D se elige en ajustes) ni la línea de ayuda. */
+@media (max-width: 599px), (max-height: 499px) {
+  .layout.screen > .panel:first-child > .panel-head, .layout.screen > .panel:last-child > .panel-head > span:first-child,
+  .layout.cockpit > .panel:first-child > .panel-head, .layout.screen > .panel > .hint, .layout.cockpit > .panel > .hint { display: none; }
+}
+@media (max-width: 599px) { .layout.cockpit > .panel:last-child { height: 58%; } }
+/* Apaisado: la carrera, la eficacia y el HUD en la columna de la izquierda, el volante con todo el alto a la derecha. */
+@media (max-height: 499px) {
+  .layout.cockpit > .panel:last-child { height: auto; align-self: stretch; justify-self: end; width: 58%; }
+  .layout.screen { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); grid-template-rows: auto auto auto auto minmax(0, 1fr); }
+  .layout.screen > .panel:last-child { display: contents; }
+  .layout.screen .race { grid-area: 1 / 1; }
+  .layout.screen #msg { grid-area: 2 / 1; }
+  .layout.screen > .panel:last-child > .panel-head { grid-area: 3 / 1; }
+  .layout.screen .hud { grid-area: 4 / 1; justify-content: flex-start; align-self: start; }
+  .layout.screen #console { grid-area: 1 / 2 / -1 / 3; }
+}
+
+/* ——— Pantalla táctil: piso de toque de 44 px y letra de 16 px en los campos (con menos, el iPhone acerca la página al tocarlos). ——— */
+@media (pointer: coarse) {
+  button, select, input[type="number"], input[type="text"] { height: 44px; }
+  select, input[type="number"], input[type="text"] { font-size: 16px; }
+  button { font-size: 14px; }
+  button.mini { height: 44px; padding: 0 12px; font-size: 13px; }
+  .view-btns button { width: 44px; }
+  .field { min-height: 44px; }
+  input[type="checkbox"] { width: 22px; height: 22px; margin: 0; flex: none; }
+  .tabs [role="tab"] { height: 44px; min-width: 44px; }
+  button.link { height: auto; }
+}
+
+/* ——— Teléfono: la pantalla de juego entra entera, sin desplazar. Paneles sin marco, la vista 3D se elige en ajustes. ——— */
+@media (max-width: 599px), (max-height: 499px) {
+  .bar { gap: 6px; padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: 6px; }
+  .bar strong { display: none; }
+  .bar .act { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 0 6px; font-size: 11px; line-height: 1.1; }
+  .bar .act svg { display: block; }
+  .bar .act .long { display: none; }
+  .bar .act .short { display: inline; }
+  .layout.auto { gap: 8px; padding-top: 6px; padding-bottom: max(6px, env(safe-area-inset-bottom)); overflow: hidden; }
+  .layout.auto > .panel { background: none; border: 0; border-radius: 0; padding: 0; position: relative; }
+  .layout.auto > .panel:first-child > .panel-head { display: none; }
+  .layout.auto > .panel > .hint { display: none; }
+  /* La lectura de la consola va sobre el lienzo, arriba a la izquierda: arriba del volante sobra lugar. */
+  .layout.auto > .panel:last-child > .panel-head { position: absolute; z-index: 2; top: 4px; left: 4px; right: 56px; pointer-events: none; }
+  .layout.auto > .panel:last-child > .panel-head > span:first-child, #eff-seg { display: none; }
+  .layout.auto .race { margin-top: 0; }
+  .layout.auto .msg { font-size: 13px; line-height: 1.35; min-height: 2.7em; }
+}
+/* Vertical: el mapa arriba con lo que sobre, la consola abajo con el alto que pide el frente del volante (208 × 182 mm). */
+@media (max-width: 599px) {
+  .bar .grow { flex-basis: 100%; height: 0; }
+  .bar .act { flex: 1 1 0; min-width: 0; }
+  #circuit { flex: 1 1 0; min-width: 0; }
+  .layout.auto { display: flex; flex-direction: column; }
+  .layout.auto > .panel:first-child { flex: 1 1 0; min-height: 150px; }
+  .layout.auto > .panel:last-child { flex: 0 1 auto; min-height: 0; }
+  .layout.auto #console { flex: 0 1 auto; width: 100%; aspect-ratio: 208 / 182; min-height: 0; }
+}
+/* Apaisado: lado a lado en un renglón de controles; la consola es angosta porque el alto es lo que la limita. */
+@media (max-height: 499px) and (min-width: 600px) {
+  .bar .act { padding: 0 10px; }
+  #circuit { flex: 0 1 220px; min-width: 120px; }
+  .layout.auto { grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr); grid-auto-rows: minmax(0, 1fr); }
+}
+
+/* ——— Diálogos en el teléfono: hoja desde abajo, a todo el ancho, con los botones siempre a la vista. ——— */
+@media (max-width: 599px) {
+  dialog, dialog.wide, dialog.help, dialog.tel {
+    width: 100%; max-width: none; margin: auto 0 0; max-height: calc(100dvh - max(16px, env(safe-area-inset-top)));
+    border-radius: 14px 14px 0 0; border-width: 1px 0 0; padding: 16px 16px 0;
+  }
+  dialog .actions button { flex: 1 1 auto; }
+  dialog .actions .grow { flex-basis: 100%; }
+  .field { flex-wrap: wrap; }
+  table.results .fast { display: block; font-size: 12px; color: var(--muted); }
+  table.results .fast::before { content: none; }
+  .chart text { font-size: 16px; }
+}

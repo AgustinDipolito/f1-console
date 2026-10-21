@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <meta name="theme-color" content="#f6f5f1" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="description" content="Carreras contra bots en circuitos reales: el auto se maneja solo y vos operás su computadora desde el volante." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Consola" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <title>Consola de carrera</title>
+</head>
+<body>
+  <header class="bar">
+    <strong>Consola de carrera</strong>
+    <select id="circuit" aria-label="Circuito"></select>
+    <button id="go">Largar</button>
+    <button id="pause">Pausa</button>
+    <span class="grow"></span>
+    <button id="btn-multi" class="act">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="7" cy="6.5" r="2.8"/><path d="M1.8 17c0-3 2.3-5.2 5.2-5.2s5.2 2.2 5.2 5.2"/><circle cx="14.2" cy="5.8" r="2.3"/><path d="M14.4 10.6c2.3.1 4 1.9 4 4.4"/></svg>
+      <span class="long">Jugar con otros</span><span class="short">Con otros</span>
+    </button>
+    <button id="btn-tel" class="act">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 2.5v15h15"/><path d="M5.5 13l3.5-4.5 3 3 5-6.5"/></svg>
+      <span>Telemetría</span>
+    </button>
+    <button id="btn-settings" class="act">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 5h2.7M9.3 5h8.2M2.5 10h8.2M14.8 10h2.7M2.5 15h4.7M11.3 15h6.2"/><circle cx="7.2" cy="5" r="2"/><circle cx="12.8" cy="10" r="2"/><circle cx="9.2" cy="15" r="2"/></svg>
+      <span>Ajustes</span>
+    </button>
+    <button id="btn-help" class="act">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.8"/><path d="M7.6 7.8a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1.1.9-1.1 1.6v.4"/><path d="M10 14.6v.2"/></svg>
+      <span>Ayuda</span>
+    </button>
+  </header>
+  <main id="layout" class="layout auto">
+    <section class="panel">
+      <div class="panel-head"><span>Fig 1 · Circuito <button id="view" class="mini">Ver en 3D</button></span><span id="info" class="mono"></span></div>
+      <div id="race" class="race mono"><span id="race-now"></span><span id="race-times"></span></div>
+      <div id="track" class="canvas-box">
+        <p id="boot" style="margin: 24px; max-width: 420px; line-height: 1.5">La consola no arrancó. Abrí la página con el servidor: corré <code>npm run dev</code> y entrá a la dirección que muestra. Para abrirla sin servidor, corré <code>npm run build</code> y abrí <code>dist/index.html</code>.</p>
+      </div>
+      <div id="msg" class="msg" role="status"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><span>Fig 2 · Consola</span><span id="readout" class="mono"><span id="eff"></span><span id="eff-seg"></span></span></div>
+      <div id="console" class="canvas-box">
+        <div id="labels" class="labels"></div>
+        <div class="view-btns">
+          <button id="rot-c" aria-label="Centrar vista" title="Centrar vista">◎</button>
+        </div>
+      </div>
+      <div class="hint"><span class="for-mouse">Clic en los controles · rotativos: tocá la marca de la posición · espacio pausa · ayuda tiene las teclas</span><span class="for-touch">Tocá los controles · en los rotativos, la marca de la posición que querés · arrastrá para inclinar la vista</span></div>
+    </section>
+  </main>
+  <dialog id="dlg-settings"></dialog>
+  <dialog id="dlg-help"></dialog>
+  <dialog id="dlg-tel" class="wide"></dialog>
+  <dialog id="dlg-multi"></dialog>
+  <dialog id="dlg-result" class="wide"></dialog>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
