@@ -126,11 +126,11 @@ function rivalFor(track: Track, code: string | null): SharedGhost | null {
   return g && g.track === track.id && g.lap.tt.length === emptyLap(track.len).tt.length ? g : null;
 }
 /**
- * Volante delante del mapa: dónde va tu auto (fracción del ancho y del alto), donde el volante no tapa. El volante tapa la mitad
- * de abajo; en el teléfono apaisado, la de la derecha (abajo quedaría a menos de 1 px por mm). Tiene que coincidir con styles.css.
+ * Volante delante del mapa: dónde va tu auto (fracción del ancho y del alto), donde el volante no tapa. El volante tapa los dos
+ * tercios de abajo; en el teléfono apaisado, la de la derecha (abajo quedaría a menos de 1 px por mm). Tiene que coincidir con styles.css.
  */
 const landscape = window.matchMedia('(max-height: 499px)');
-const cockpitAt = (): [number, number] => (landscape.matches ? [0.22, 0.5] : [0.5, 0.3]);
+const cockpitAt = (): [number, number] => (landscape.matches ? [0.22, 0.5] : [0.5, 0.22]);
 const applyLayout = (): void => { els.layout.className = `layout ${cfg.layout}`; placeMap(); };
 
 /**

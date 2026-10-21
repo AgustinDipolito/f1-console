@@ -346,6 +346,15 @@ export class ConsoleView {
     m.visible = false;
   }
 
+  /**
+   * Área de toque rectangular, de x0 a x1 y de y0 a y1 en el frente (mm). Los botones chicos van pegados (BB a 22 mm, fusibles a 22):
+   * cada área llega hasta la del vecino y se estira hacia donde no hay otro control, para acercarse a los 44 px del dedo.
+   */
+  private hitBox(x0: number, x1: number, y0: number, y1: number, ctl: string, h = BODY_T + 8): void {
+    const m = this.parts.add(new THREE.BoxGeometry(x1 - x0, h, y1 - y0), this.ink.inkMat, (x0 + x1) / 2, h / 2, -(y0 + y1) / 2, this.face, false, ctl);
+    m.visible = false;
+  }
+
   private build(pal: Palette, wc: WheelColors): void {
     const p = this.parts, ink = this.ink, s = this.scene;
     const wheel = new THREE.Group();
@@ -437,6 +446,8 @@ export class ConsoleView {
     [4, 8, 12].forEach((i) => p.mark(0.4, 7, -52.5 + 7.5 * (i - 0.5), BODY_T + 0.1, -64, face));
 
     // Frenos: BB+ arriba y BB− abajo, bajo el pulgar izquierdo.
+    // Áreas: hasta el borde del frente a la izquierda y hasta el ERS a la derecha; entre las dos, el medio de los botones.
+    const bbHit: Record<string, [number, number]> = { 'bb+': [23, 46], 'bb-': [-2, 23] };
     const bb = ([[34, 'bb+'], [12, 'bb-']] as [number, string][]).map(([fy, ctl]) => {
       p.cyl(9, 1.2, pal.mid, -84, BODY_T, -fy, face, 28);
       const b = new THREE.Group();
@@ -445,7 +456,7 @@ export class ConsoleView {
       p.cyl(7, 2.6, wc.cap ?? wc.knob, 0, 0, 0, b, 28, ctl);
       p.mark(5, 0.8, 0, 2.6, 0, b);
       if (ctl === 'bb+') p.mark(0.8, 5, 0, 2.6, 0, b);
-      this.hitArea(10, -84, fy, ctl);
+      this.hitBox(-98, -66, ...bbHit[ctl], ctl);
       return b;
     });
 
@@ -455,7 +466,7 @@ export class ConsoleView {
     limBtn.position.set(84, BODY_T + 2.2, -56);
     face.add(limBtn);
     p.cyl(7, 2.4, wc.knob, 0, 0, 0, limBtn, 28, 'lim');
-    this.hitArea(9, 84, 56, 'lim', face, BODY_T + 4);
+    this.hitArea(14, 84, 56, 'lim', face, BODY_T + 4);
     const hinge = new THREE.CylinderGeometry(1.4, 1.4, 22, 16);
     hinge.rotateZ(Math.PI / 2);
     p.add(hinge, ink.tone(pal.mid), 84, BODY_T + 1.4, -68, face);
@@ -465,6 +476,9 @@ export class ConsoleView {
     p.box(22, 1, 22, wc.knob, 0, 5.4, 11, guard, 'grd');
     p.box(1, 6, 22, wc.knob, -10.5, 0, 11, guard, 'grd');
     p.box(1, 6, 22, wc.knob, 10.5, 0, 11, guard, 'grd');
+    // Cerrada, el área de la tapa cubre entera la del limitador: un toque en el borde abre la tapa en vez de no hacer nada.
+    const gh = this.parts.add(new THREE.BoxGeometry(30, 8, 30), this.ink.inkMat, 0, 4, 11, guard, false, 'grd');
+    gh.visible = false;
 
     // Fusibles: tres botones rebajados que saltan y muestran la banda roja.
     p.slab(70, 22, 1, 3, 0.3, pal.mid, 0, BODY_T, -FUSE_Y, face);
@@ -476,7 +490,8 @@ export class ConsoleView {
       p.add(new THREE.CylinderGeometry(5.6, 5.6, 4, 20), ink.redMat, 0, -2, 0, f, false, `f${i}`);
       p.cyl(6.2, 1.6, wc.knob, 0, 0, 0, f, 24, `f${i}`);
       p.mark(4, 0.6, 0, 1.6, 0, f);
-      this.hitArea(10, x, FUSE_Y, `f${i}`);
+      // Del medio entre fusibles al del vecino; arriba hasta el marco de la pantalla y abajo hasta el área de los rotativos.
+      this.hitBox(x - 11, x + 11, -26, -4, `f${i}`);
       return f;
     });
 
