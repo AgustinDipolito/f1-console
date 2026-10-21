@@ -25,6 +25,8 @@ export interface Config {
   fxAim: boolean;
   fxFlash: boolean;
   fxDelta: boolean;
+  /** Comentarios bajo el volante: qué salió bien o mal en cada tramo. */
+  coach: boolean;
   /** Efectos del mapa y la pista: pérdidas de la vuelta en el mapa y discos al rojo en las frenadas. */
   fxLosses: boolean;
   fxBrakes: boolean;
@@ -56,6 +58,7 @@ export const DEFAULTS: Config = {
   fxAim: true,
   fxFlash: true,
   fxDelta: true,
+  coach: true,
   fxLosses: true,
   fxBrakes: true,
   haptics: true,

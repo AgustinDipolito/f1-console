@@ -23,6 +23,7 @@ import { TOP, located, lossMarks, lossText, type LossMark } from './ui/losses';
 import { lapDiagnosis } from './sim/diagnose';
 import type { MultiActions, MultiState } from './ui/multi';
 import { SEG_NAMES, f1, fmt } from './ui/format';
+import { Coach } from './ui/coach';
 import { Awake, BUZZ, buzz, installState, registerWorker, watchInstall } from './ui/device';
 
 // Lo que no hace falta para la primera pantalla se baja cuando se usa: el volante 3D (three) arranca
@@ -47,6 +48,7 @@ const els = {
   info: byId('info'),
   raceNow: byId('race-now'),
   raceTimes: byId('race-times'),
+  log: byId('log'),
   msg: byId('msg'),
   readout: byId('readout'),
   eff: byId('eff'),
@@ -151,6 +153,9 @@ function setGo(label: 'Largar' | 'Reiniciar' | 'Revancha'): void {
   els.go.classList.toggle('primary', label !== 'Reiniciar');
 }
 
+/** Comentarios bajo el volante, uno por tramo. Se vacían al volver a la grilla. */
+const coach = new Coach();
+
 const consoleFx = (): ConsoleFx => ({ leds: cfg.fxLeds, aim: cfg.fxAim, flash: cfg.fxFlash, delta: cfg.fxDelta });
 
 function setupConsole(v: ConsoleView): void {
@@ -226,6 +231,7 @@ async function selectCircuit(id: string): Promise<void> {
   const { track, source } = await loadTrack(id, info?.name ?? id);
   if (my !== loadId) return;
   race = new Race(track, raceOpts());
+  coach.reset();
   best = loadBest(track.id);
   rival = rivalFor(track, loadRival(id));
   laps = 0;
@@ -422,6 +428,16 @@ function hud(): void {
   setText(els.raceTimes, [`última ${fmt(p.last)}`, `mejor ${fmt(best?.t ?? p.best)}`, `${Math.round(p.v * 3.6)} km/h`].join(' · '));
   // En el teléfono el tramo lo dice la etiqueta del volante: la lectura queda en la eficacia.
   if (view) { setText(els.eff, `eficacia ${Math.round(p.eff * 100)} %`); setText(els.effSeg, ` · ${SEG_NAMES[p.ty]}`); }
+  drawLog();
+}
+
+/** Renglones del comentarista: escribe solo el texto o el tono que cambió. */
+function drawLog(): void {
+  [...els.log.children].forEach((el, i) => {
+    const l = coach.lines[i], tone = l ? (l.good ? 'good' : 'bad') : '';
+    setText(el as HTMLElement, l?.text ?? '');
+    if (el.className !== tone) el.className = tone;
+  });
 }
 
 // ——— Sala y fantasma de otro jugador ———
@@ -431,6 +447,7 @@ function toGrid(): void {
   if (!race) return;
   race.opts = raceOpts();
   race.reset();
+  coach.reset();
   laps = 0;
   lapMarks = [];
   final = null;
@@ -614,6 +631,7 @@ function applySettings(next: Config): void {
   cfg = next;
   saveConfig(cfg);
   applyLayout();
+  els.log.hidden = !cfg.coach;
   sound.setEnabled(cfg.sound);
   if (next.livery !== prev.livery) livery = pickLivery(next.livery);
   if (next.theme !== prev.theme) { theme = applyTheme(cfg.theme); map.setColors(mapColors()); }
@@ -701,6 +719,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 });
 
 applyLayout();
+els.log.hidden = !cfg.coach;
 setGo('Largar');
 watchInstall();
 registerWorker();
@@ -737,7 +756,11 @@ function sendSnap(r: Race, dt: number): void {
 }
 
 function stepRace(r: Race, dt: number): void {
+  const t0 = r.t;
   for (const ev of r.step(dt, timeScale(), panel)) onEvent(ev);
+  const p = r.player;
+  // En tiempo de carrera: en pausa no avanza y a ×3 cuenta lo mismo que a ×1.
+  if (r.green && !p.done) coach.step({ ty: p.ty, ctl: { ...panel }, fuse: p.fuse.slice(), bat: p.bat, bal: balWant(p), temp: p.temp, soon: gauges(r).soon }, r.t - t0);
   countdown(r);
   checkLap();
   sendSnap(r, dt);

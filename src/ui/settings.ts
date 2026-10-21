@@ -51,6 +51,7 @@ export function openSettings(dlg: HTMLDialogElement, cfg: Config, onChange: (c: 
       ${chk('fxAim', 'Marcar la posición del rotativo al apuntar')}
       ${chk('fxFlash', 'Destello al entrar al tramo bien configurado')}
       ${chk('fxDelta', 'Barra de delta en la pantalla')}
+      ${chk('coach', 'Comentarios bajo el volante')}
       <h3>Efectos del mapa y la pista</h3>
       ${chk('fxLosses', 'Pérdidas de la última vuelta en el mapa')}
       ${chk('fxBrakes', 'Discos al rojo en las frenadas (pista 3D)')}
@@ -63,7 +64,7 @@ export function openSettings(dlg: HTMLDialogElement, cfg: Config, onChange: (c: 
   const sl = (n: string): HTMLSelectElement => form.elements.namedItem(n) as HTMLSelectElement;
   const btn = (k: string): HTMLButtonElement => form.querySelector(`[data-${k}]`) as HTMLButtonElement;
   // Vibrar solo aparece donde el aparato vibra: en el resto el ajuste queda como estaba.
-  const checks = (['assist', 'faults', 'showBraking', 'showTrail', 'showGhost', 'sound', 'haptics', 'labels', 'fxLeds', 'fxAim', 'fxFlash', 'fxDelta', 'fxLosses', 'fxBrakes'] as const)
+  const checks = (['assist', 'faults', 'showBraking', 'showTrail', 'showGhost', 'sound', 'haptics', 'labels', 'fxLeds', 'fxAim', 'fxFlash', 'fxDelta', 'coach', 'fxLosses', 'fxBrakes'] as const)
     .filter((k) => k !== 'haptics' || vibrate);
   const fill = (c: Config): void => {
     sl('difficulty').value = c.difficulty;

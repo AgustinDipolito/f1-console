@@ -209,6 +209,17 @@ table.results td { padding: 5px 6px; border-top: 1px solid var(--border); }
 table.results tr.me td { font-weight: 600; }
 table.results .fast::before { content: " · "; }
 
+/* Comentarios bajo el volante: un renglón por tramo, el más nuevo arriba y los anteriores más tenues. Alto fijo para que el volante
+   no salte al llegar un renglón; 3 en la computadora, 2 en el teléfono vertical y 1 apaisado. El punto es el dato: verde bien, rojo mal. */
+.log { font-size: 12px; line-height: 18px; height: 54px; overflow: hidden; color: var(--muted); font-variant-numeric: tabular-nums; }
+.log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log div:not(:first-child) { opacity: 0.6; }
+.log .good::before, .log .bad::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin: 0 6px 1px 0; background: #1d9e75; }
+.log .bad::before { background: #e24b4a; }
+.log .bad:first-child { color: var(--text); }
+@media (max-width: 599px) { .log { height: 36px; } }
+@media (max-height: 499px) { .log { height: 18px; } }
+
 /* ——— Mapa en el volante: un solo panel. El mapa va sobre el vidrio de la pantalla (la consola le da tamaño y transformación)
    y las lecturas de la pantalla pasan al HUD, en un renglón arriba del volante. Carrera arriba, el mensaje abajo. ——— */
 .layout.screen { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-auto-rows: auto; gap: 6px; overflow: hidden; }
@@ -250,6 +261,7 @@ table.results .fast::before { content: " · "; }
   .layout.screen > .panel:last-child > .panel-head { grid-area: 3 / 1; }
   .layout.screen .hud { grid-area: 4 / 1; justify-content: flex-start; align-self: start; }
   .layout.screen #console { grid-area: 1 / 2 / -1 / 3; }
+  .layout.screen .log { grid-area: 5 / 1; align-self: end; height: 54px; }
 }
 
 /* ——— Pantalla táctil: piso de toque de 44 px y letra de 16 px en los campos (con menos, el iPhone acerca la página al tocarlos). ——— */
