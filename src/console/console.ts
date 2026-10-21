@@ -24,12 +24,12 @@ const NEAR = 200;
 const FAR = 800;
 /**
  * Encuadre: volante entero (con empuñaduras y levas, unos ±168 mm de ancho y ±112 de alto con etiquetas) o, cuando así
- * queda chico, solo el frente: el cuerpo con sus controles (±104 de ancho, de −87 a +95 de alto con las etiquetas de arriba
- * y abajo). En un teléfono vertical el frente sale 1,6 veces más grande y los rotativos se pueden tocar con el dedo.
- * Girando (difícil, hasta 90°) hace falta el círculo que barre cada uno: 168 el volante, 124 el frente.
+ * queda chico, el frente hasta las empuñaduras: ±141 de ancho (abiertas 5°, asoman apenas las levas) y ±102 de alto alrededor
+ * de y = 4, para que entre la sugerencia de dos renglones debajo de los rotativos. En un teléfono vertical sale 1,2 veces más grande que el volante entero y ninguna
+ * empuñadura queda cortada. Girando (difícil, hasta 90°) hace falta el círculo que barre cada uno: 168 y 165.
  */
 const FULL = { w: 168, h: 112, turn: 168 };
-const FACE = { w: 104, h: 91, turn: 124 };
+const FACE = { w: 141, h: 102, turn: 165 };
 /** Por debajo de esta escala (px por mm) con el volante entero, se encuadra el frente. */
 export const FACE_BELOW = 1.6;
 
@@ -168,8 +168,6 @@ export class ConsoleView {
     this.resize();
     this.applyCamera();
   }
-
-  center(): void { this.azT = 0; this.elT = EL0; }
 
   setSteerRoom(on: boolean): void { this.steerRoom = on; this.resize(); }
 
@@ -447,6 +445,9 @@ export class ConsoleView {
 
     // Frenos: BB+ arriba y BB− abajo, bajo el pulgar izquierdo.
     // Áreas: hasta el borde del frente a la izquierda y hasta el ERS a la derecha; entre las dos, el medio de los botones.
+    // Línea índice de perillas y BB: oscura sobre tapa clara y clara sobre tapa oscura, sea cual sea el tema.
+    const capC = new THREE.Color(wc.cap ?? wc.knob), capL = 0.2126 * capC.r + 0.7152 * capC.g + 0.0722 * capC.b;
+    const idx = ink.tone(capL > 0.35 ? 0x111114 : 0xf2f2f2);
     const bbHit: Record<string, [number, number]> = { 'bb+': [23, 46], 'bb-': [-2, 23] };
     const bb = ([[34, 'bb+'], [12, 'bb-']] as [number, string][]).map(([fy, ctl]) => {
       p.cyl(9, 1.2, pal.mid, -84, BODY_T, -fy, face, 28);
@@ -454,8 +455,8 @@ export class ConsoleView {
       b.position.set(-84, BODY_T + 2.4, -fy);
       face.add(b);
       p.cyl(7, 2.6, wc.cap ?? wc.knob, 0, 0, 0, b, 28, ctl);
-      p.mark(5, 0.8, 0, 2.6, 0, b);
-      if (ctl === 'bb+') p.mark(0.8, 5, 0, 2.6, 0, b);
+      p.mark(5, 0.8, 0, 2.6, 0, b, 0, idx);
+      if (ctl === 'bb+') p.mark(0.8, 5, 0, 2.6, 0, b, 0, idx);
       this.hitBox(-98, -66, ...bbHit[ctl], ctl);
       return b;
     });
@@ -505,7 +506,7 @@ export class ConsoleView {
       face.add(g);
       p.cyl(12, 9, wc.knob, 0, 0, 0, g, 36, kn);
       p.cyl(10.5, 1, wc.cap ?? wc.knob, 0, 9, 0, g, 36, kn);
-      p.mark(1.2, 7, 0, 10, -5, g);
+      p.mark(1.2, 7, 0, 10, -5, g, 0, idx);
       for (let i = 0; i < 24; i++) {
         const a = (i / 24) * Math.PI * 2;
         const o = p.add(new THREE.PlaneGeometry(0.4, 7.6), ink.inkMat, Math.sin(a) * 12.06, 4.5, Math.cos(a) * 12.06, g, true);
@@ -752,7 +753,7 @@ export class ConsoleView {
     this.faceFit = face;
     // Para revisar en el navegador sin mirar el código: la escala y el encuadre quedan en la caja.
     this.box.dataset.pxmm = (h / (2 * hh)).toFixed(2);
-    this.box.dataset.frame = face ? 'frente' : 'entero';
+    this.box.dataset.frame = face ? 'empuñaduras' : 'entero';
     // El mapa mide en px lo que mide el vidrio con esta escala: así se dibuja nítido y la transformación casi no lo estira.
     this.scrPx = [Math.max(1, Math.round(SCR.w * (h / (2 * hh)))), Math.max(1, Math.round(SCR.h * (h / (2 * hh))))];
     if (this.screenEl) { this.screenEl.style.width = `${this.scrPx[0]}px`; this.screenEl.style.height = `${this.scrPx[1]}px`; }

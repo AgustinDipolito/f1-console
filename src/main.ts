@@ -657,7 +657,6 @@ els.go.addEventListener('click', () => {
 });
 els.pause.addEventListener('click', togglePause);
 els.view.addEventListener('click', () => { cfg = { ...cfg, mapView: cfg.mapView === '3d' ? '2d' : '3d' }; saveConfig(cfg); void applyView(); });
-byId('rot-c').addEventListener('click', () => view?.center());
 byId('btn-help').addEventListener('click', () => lazy(helpModule, (m) => m.openHelp(els.help)));
 els.multiBtn.addEventListener('click', () => openMulti());
 byId('btn-tel').addEventListener('click', () =>

@@ -59,10 +59,11 @@ describe('encuadre de la consola', () => {
   /** Cajas medidas en el navegador: teléfono vertical y apaisado, tableta, computadora. */
   const BOXES: [number, number][] = [[344, 301], [374, 328], [340, 272], [718, 396], [717, 640], [1200, 700]];
 
-  it('en un teléfono vertical encuadra el frente: los controles salen 1,6 veces más grandes', () => {
-    expect(frameFor(374, 328, false).face).toBe(true);
-    expect(pxmm(374, 328)).toBeGreaterThan(1.75);
-    expect(pxmm(374, 328) / (328 / (2 * (168 / (374 / 328))))).toBeGreaterThan(1.6);
+  it('en un teléfono vertical encuadra hasta las empuñaduras: enteras a la vista y los controles 1,2 veces más grandes', () => {
+    const { hh, face } = frameFor(374, 328, false);
+    expect(face).toBe(true);
+    expect(hh * (374 / 328)).toBeGreaterThanOrEqual(141);
+    expect(pxmm(374, 328) / (328 / (2 * (168 / (374 / 328))))).toBeGreaterThan(1.18);
   });
 
   it('con lugar sigue el volante entero, como antes', () => {
