@@ -76,24 +76,29 @@ describe('lista de lo que guarda el service worker', () => {
 
 // ——— El service worker en un entorno de mentira: cachés en memoria y una red que se puede cortar ———
 
-type Req = { url: string; method: string; mode: string };
+type Req = { url: string; method: string; mode: string; cache?: string };
 const BASE = 'https://consola.test/app/';
 const FILES = ['index.html', 'assets/index-abc.js', 'tracks/ar-1952.geojson'];
 
 function fakeWorker(version = 'v1') {
   const stores = new Map<string, Map<string, Response>>();
+  const net = { online: true, asked: [] as string[], reloads: [] as string[] };
   const key = (r: Req | string): string => new URL(typeof r === 'string' ? r : r.url, BASE).href;
   const store = (name: string) => {
     if (!stores.has(name)) stores.set(name, new Map());
     const m = stores.get(name) as Map<string, Response>;
     return {
-      addAll: async (fs: string[]) => { for (const f of fs) m.set(key(f), new Response(`guardado ${f}`)); },
+      addAll: async (fs: (Req | string)[]) => {
+        for (const f of fs) {
+          if (typeof f !== 'string') net.reloads.push(f.cache ?? '');
+          m.set(key(f), new Response(`guardado ${typeof f === 'string' ? f : f.url}`));
+        }
+      },
       match: async (r: Req | string, o?: { ignoreSearch?: boolean }) => m.get(o?.ignoreSearch ? key(r).split('?')[0] : key(r))?.clone(),
       put: async (r: Req, res: Response) => { m.set(key(r), res); },
     };
   };
   const caches = { open: async (n: string) => store(n), keys: async () => [...stores.keys()], delete: async (n: string) => stores.delete(n) };
-  const net = { online: true, asked: [] as string[] };
   const fetch = async (r: Req): Promise<Response> => {
     net.asked.push(r.url);
     if (!net.online) throw new TypeError('sin red');
@@ -101,7 +106,9 @@ function fakeWorker(version = 'v1') {
   };
   const on: Record<string, (e: unknown) => void> = {};
   const self = { addEventListener: (t: string, f: (e: unknown) => void) => { on[t] = f; }, clients: { claim: async () => undefined } };
-  new Function('self', 'caches', 'fetch', 'location', swSource(version, FILES))(self, caches, fetch, new URL(BASE));
+  // Request de mentira: guarda la ruta tal cual y el modo de caché.
+  const Request = function (url: string, o?: { cache?: string }): Req { return { url, method: 'GET', mode: 'no-cors', cache: o?.cache }; };
+  new Function('self', 'caches', 'fetch', 'location', 'Request', swSource(version, FILES))(self, caches, fetch, new URL(BASE), Request);
   /** Dispara un evento y devuelve la respuesta, o null si el service worker no la tomó. */
   const fire = async (type: string, request?: Req): Promise<string | null> => {
     const waits: Promise<unknown>[] = [];
@@ -124,6 +131,12 @@ describe('service worker', () => {
     expect(await w.fire('fetch', w.get('assets/index-abc.js?v=2'))).toBe('guardado assets/index-abc.js');
     expect(await w.fire('fetch', w.get('tracks/ar-1952.geojson'))).toBe('guardado tracks/ar-1952.geojson');
     expect(w.net.asked).toEqual([]);
+  });
+
+  it('al instalarse saltea la caché HTTP, así no guarda un index.html de la versión anterior', async () => {
+    const w = fakeWorker();
+    await w.fire('install');
+    expect(w.net.reloads).toEqual(FILES.map(() => 'reload'));
   });
 
   it('lo que no guardó lo pide a la red, y no toca lo que no es GET ni otros sitios', async () => {

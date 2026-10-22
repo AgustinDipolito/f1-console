@@ -24,7 +24,8 @@ export function swSource(version: string, files: string[]): string {
   return `// Consola de carrera · versión ${version}. Generado por vite.config.ts desde src/pwa/sw.ts.
 const CACHE = 'consola-${version}', DATA = '${DATA_CACHE}', FILES = ${JSON.stringify(files)};
 
-self.addEventListener('install', (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES))));
+// cache: 'reload' saltea la caché HTTP (Pages da max-age=600): si no, la versión nueva puede guardar el index.html viejo.
+self.addEventListener('install', (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: 'reload' }))))));
 
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys()
   .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== DATA).map((k) => caches.delete(k))))
