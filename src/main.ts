@@ -1,6 +1,6 @@
 import './styles.css';
 import catalogJson from './tracks/catalog.json';
-import { loadBest, loadConfig, loadLast, loadRival, saveBest, saveLast, saveConfig, saveRival, type Config } from './config';
+import { firstRun, loadBest, loadConfig, loadLast, loadRival, markWelcomed, saveBest, saveLast, saveConfig, saveRival, type Config } from './config';
 import { loadTrack } from './tracks/load';
 import { Race, type RaceEvent } from './sim/race';
 import { FUSED, ahead, balWant, fuelLoad, fuelNeed, steer } from './sim/car';
@@ -25,6 +25,7 @@ import type { MultiActions, MultiState } from './ui/multi';
 import { SEG_NAMES, f1, fmt } from './ui/format';
 import { Coach } from './ui/coach';
 import { Awake, BUZZ, buzz, installState, registerWorker, watchInstall } from './ui/device';
+import { cockpitFollow } from './ui/layouts';
 
 // Lo que no hace falta para la primera pantalla se baja cuando se usa: el volante 3D (three) arranca
 // enseguida pero sin frenar el mapa; la pista 3D, la sala y los diálogos, recién al pedirlos.
@@ -36,6 +37,7 @@ const helpModule = () => import('./ui/help');
 const telemetryModule = () => import('./ui/telemetry');
 const multiModule = () => import('./ui/multi');
 const resultsModule = () => import('./ui/results');
+const welcomeModule = () => import('./ui/welcome');
 
 interface CircuitInfo { id: string; name: string }
 const catalog = (catalogJson as CircuitInfo[]).slice().sort((a, b) => a.name.localeCompare(b.name, 'es'));
@@ -62,6 +64,7 @@ const els = {
   tel: byId<HTMLDialogElement>('dlg-tel'),
   multi: byId<HTMLDialogElement>('dlg-multi'),
   result: byId<HTMLDialogElement>('dlg-result'),
+  welcome: byId<HTMLDialogElement>('dlg-welcome'),
   multiBtn: byId<HTMLButtonElement>('btn-multi'),
   multiLabels: [...document.querySelectorAll<HTMLElement>('#btn-multi .long, #btn-multi .short')],
 };
@@ -129,10 +132,10 @@ function rivalFor(track: Track, code: string | null): SharedGhost | null {
 }
 /**
  * Volante delante del mapa: dónde va tu auto (fracción del ancho y del alto), donde el volante no tapa. El volante tapa los dos
- * tercios de abajo; en el teléfono apaisado, la de la derecha (abajo quedaría a menos de 1 px por mm). Tiene que coincidir con styles.css.
+ * tercios de abajo; en el teléfono apaisado, la de la derecha (abajo quedaría a menos de 1 px por mm). Lo mismo dibuja la bienvenida.
  */
 const landscape = window.matchMedia('(max-height: 499px)');
-const cockpitAt = (): [number, number] => (landscape.matches ? [0.22, 0.5] : [0.5, 0.22]);
+const cockpitAt = (): [number, number] => cockpitFollow(landscape.matches);
 const applyLayout = (): void => { els.layout.className = `layout ${cfg.layout}`; placeMap(); };
 
 /**
@@ -679,7 +682,20 @@ byId('btn-help').addEventListener('click', () => lazy(helpModule, (m) => m.openH
 els.multiBtn.addEventListener('click', () => openMulti());
 byId('btn-tel').addEventListener('click', () =>
   lazy(telemetryModule, (m) => m.openTelemetry(els.tel, race?.track ?? null, race?.player.hist ?? [], best)));
-byId('btn-settings').addEventListener('click', () => lazy(settingsModule, (m) => m.openSettings(els.settings, cfg, applySettings, installState())));
+byId('btn-settings').addEventListener('click', () => lazy(settingsModule, (m) => m.openSettings(els.settings, cfg, applySettings, installState(), openWelcome)));
+
+/**
+ * Bienvenida: nombre, volante, distribución y dificultad, con dibujos. Sola en el primer ingreso y desde ajustes cuando se pida.
+ * Lo elegido se aplica como un cambio de ajustes. Al cerrar puede largar o abrir la ayuda; `after` sigue con lo que esperaba (un link).
+ */
+function openWelcome(after?: () => void): void {
+  lazy(welcomeModule, (m) => m.openWelcome(els.welcome, cfg, { theme, shown: livery, canGo: () => !net && race?.phase === 'grid' }, applySettings, (how) => {
+    markWelcomed();
+    if (how === 'help') lazy(helpModule, (h) => h.openHelp(els.help));
+    if (how === 'go' && race && race.phase === 'grid' && !net) els.go.click();
+    after?.();
+  }));
+}
 
 /** Escribiendo en un campo o con un diálogo abierto, las teclas no son de la consola. */
 const typing = (t: HTMLElement | null): boolean => !!t && (!!t.closest('dialog') || ['INPUT', 'SELECT', 'TEXTAREA'].includes(t.tagName));
@@ -726,14 +742,13 @@ registerWorker();
 void buildConsole();
 void applyView();
 void selectCircuit(els.circuit.value);
-readHash();
+// Primer ingreso: la bienvenida va primero, y un link de sala o de fantasma se atiende al cerrarla (la sala pide el nombre que se pone ahí).
+if (firstRun()) openWelcome(readHash);
+else readHash();
 // Si la pestaña se recargó justo al terminar, la tabla de resultados vuelve a aparecer.
 const lastRes = loadLast();
 if (lastRes) openResultsDialog(catalog.find((c) => c.id === lastRes.circuit)?.name ?? lastRes.circuit, lastRes);
 window.addEventListener('hashchange', readHash);
-try {
-  if (!localStorage.getItem('f1c.help')) { lazy(helpModule, (m) => m.openHelp(els.help)); localStorage.setItem('f1c.help', '1'); }
-} catch { /* sin almacenamiento */ }
 
 const panelKey = (): string => `${panel.lev}${panel.ers}${panel.dif}${panel.eb}${panel.bal}${panel.lim}${panel.grd}${panel.rst.join('')}`;
 let last = performance.now(), hudT = 1, pk = panelKey(), cd = 0, netT = 0;

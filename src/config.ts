@@ -69,6 +69,7 @@ const KEY = 'f1c.config.v1';
 const PROFILES = 'f1c.profiles.v1';
 const BEST = 'f1c.best.v1.';
 const RIVAL = 'f1c.rival.v1.';
+const WELCOME = 'f1c.welcome';
 
 const read = <T>(key: string, def: T): T => {
   try {
@@ -132,6 +133,20 @@ export function saveRival(id: string, code: string | null): void {
   if (code !== null) { write(RIVAL + id, code); return; }
   try { localStorage.removeItem(RIVAL + id); } catch { /* sin almacenamiento disponible */ }
 }
+
+/**
+ * Primer ingreso: nadie pasó por la bienvenida en este navegador. Quien ya había jugado antes de que existiera
+ * (vio la ayuda del primer ingreso o tiene ajustes guardados) no la ve sola: la abre desde ajustes.
+ * Sin almacenamiento no se muestra: aparecería en cada visita.
+ */
+export function firstRun(): boolean {
+  try {
+    return ![WELCOME, 'f1c.help', KEY].some((k) => localStorage.getItem(k) !== null);
+  } catch {
+    return false;
+  }
+}
+export const markWelcomed = (): void => write(WELCOME, 1);
 
 /** Último resultado de carrera: sobrevive a una recarga de la pestaña para no perder la tabla. */
 export interface LastResult { circuit: string; laps: number; rows: { pos: number; name: string; me: boolean; fin: number | null; best: number | null }[] }

@@ -1,7 +1,7 @@
 /**
  * Revisión de la página en teléfono, tableta y escritorio con Chrome sin ventana.
  * Sirve dist-web/ (antes: `npm run build:web`), la abre en cada tamaño de pantalla, mide lo que se puede medir
- * y guarda una captura de la pantalla de juego (en la grilla y corriendo) y de cada diálogo.
+ * y guarda una captura de la pantalla de juego (en la grilla y corriendo), de cada diálogo y de cada paso de la bienvenida del primer ingreso.
  *
  *   npm run check:mobile                    capturas en la carpeta temporal del sistema
  *   npm run check:mobile -- --out capturas  capturas en ./capturas
@@ -115,11 +115,11 @@ const LAST = JSON.stringify({ circuit: 'ar-1952', laps: 3, rows: [
 const FRESH = `try { localStorage.clear(); localStorage.setItem('f1c.help', '1'); localStorage.setItem('f1c.last', ${JSON.stringify(LAST)}); } catch {}`;
 const READY = `!!document.querySelector('#console canvas') && /Listo|prueba/.test(document.getElementById('msg').textContent)`;
 
-async function open(c, base, sc) {
+async function open(c, base, sc, init = FRESH) {
   const t = await tab(c);
   await t.send('Emulation.setDeviceMetricsOverride', { width: sc.w, height: sc.h, deviceScaleFactor: sc.dpr, mobile: sc.touch });
   if (sc.touch) await t.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
-  await t.send('Page.addScriptToEvaluateOnNewDocument', { source: FRESH });
+  await t.send('Page.addScriptToEvaluateOnNewDocument', { source: init });
   await t.send('Page.navigate', { url: base });
   t.until = async (cond, ms = 15000) => { for (let i = 0; i < ms; i += 200) { if (await t.evaluate(cond)) return true; await sleep(200); } return false; };
   await t.until(READY);
@@ -153,6 +153,67 @@ async function screen(c, base, sc) {
   await shot('carrera');
   await t.close();
   return report;
+}
+
+/** Primer ingreso: sin nada guardado, abre la bienvenida (solo una vez, aunque la página se recargue a mitad de camino). */
+const FIRST = `try { if (!sessionStorage.getItem('chk')) { localStorage.clear(); sessionStorage.setItem('chk', '1'); } } catch {}`;
+const WELCOME_MEASURE = `(() => {
+  const d = document.getElementById('dlg-welcome'), fail = [], body = d.querySelector('.wl-body');
+  // En el teléfono apaisado el paso puede desplazarse (como ajustes), pero lo que se elige tiene que verse entero al abrirlo.
+  if (innerHeight < 500) {
+    const b = body.getBoundingClientRect();
+    for (const el of d.querySelectorAll('.wl-track, .wl-nav, .wl-layouts, .seg.wide, input[name=name], .wl-sum')) {
+      const r = el.getBoundingClientRect();
+      if (r.top < b.top - 1 || r.bottom > b.bottom + 1) fail.push('lo que se elige no se ve entero al abrir el paso: ' + el.className);
+    }
+  } else if (body.scrollHeight > body.clientHeight + 1) fail.push('el paso no entra sin desplazar: ' + body.scrollHeight + ' px en ' + body.clientHeight);
+  for (const el of d.querySelectorAll('.wl-card svg, .diagram')) { const r = el.getBoundingClientRect(); if (r.height < 40 && el.closest('label').querySelector('input').checked) fail.push('dibujo elegido muy chico: ' + Math.round(r.height) + ' px de alto'); }
+  return { fail, info: { paso: d.querySelector('.wl-progress span')?.textContent } };
+})()`;
+
+/** La bienvenida paso por paso: mide y saca una captura de cada uno, elige otra cosa en cada paso y comprueba que quedó guardada. */
+async function welcome(c, base, sc) {
+  const t = await open(c, base, sc, FIRST), report = [], fail = [];
+  const shot = async (name) => writeFileSync(join(OUT, `${sc.name}-${name}.png`), await t.shot());
+  if (!(await t.until(`document.getElementById('dlg-welcome').open`, 6000))) return [{ what: 'bienvenida', fail: ['no abrió en el primer ingreso'], info: {} }];
+  const step = async (n, act) => {
+    await sleep(500);
+    const m = await t.evaluate(DIALOG_MEASURE('dlg-welcome')), w = await t.evaluate(WELCOME_MEASURE);
+    report.push({ what: `bienvenida ${n}`, fail: [...m.fail, ...w.fail], info: { ...m.info, ...w.info } });
+    await shot(`bienvenida-${n}`);
+    if (act) await t.evaluate(act);
+  };
+  const next = `document.querySelector('#dlg-welcome [data-next]').click()`;
+  await step(1, `(() => { const f = document.querySelector('#dlg-welcome input[name=name]'); f.value = 'Prueba'; ${next}; })()`);
+  await sleep(400);
+  await t.evaluate(`document.querySelector('#dlg-welcome [data-move="1"]').click(); document.querySelector('#dlg-welcome [data-move="1"]').click()`);
+  await sleep(700);
+  const picked = await t.evaluate(`document.querySelector('#dlg-welcome input[name=livery]:checked').value`);
+  await step(2, next);
+  await t.evaluate(`document.querySelector('#dlg-welcome input[name=layout][value=cockpit]').click()`);
+  await step(3, next);
+  await t.evaluate(`document.querySelector('#dlg-welcome input[name=difficulty][value=easy]').click()`);
+  await step(4, next);
+  await step(5, `document.querySelector('#dlg-welcome [data-end="go"]').click()`);
+  await sleep(800);
+  const saved = await t.evaluate(`JSON.parse(localStorage.getItem('f1c.config.v1') || '{}')`);
+  const want = { name: 'Prueba', livery: picked, layout: 'cockpit', difficulty: 'easy' };
+  for (const [k, v] of Object.entries(want)) if (saved[k] !== v) fail.push(`no quedó guardado ${k}: ${JSON.stringify(saved[k])} en vez de ${JSON.stringify(v)}`);
+  if (picked === 'azar') fail.push('las flechas del carrusel no cambiaron el esquema');
+  if (!(await t.evaluate(`localStorage.getItem('f1c.welcome') === '1'`))) fail.push('no quedó marcado que ya se vio');
+  if (!(await t.evaluate(`document.getElementById('layout').classList.contains('cockpit')`))) fail.push('la distribución elegida no se aplicó');
+  await afterWelcome(t, report, fail, sc);
+  await t.close();
+  return report;
+}
+/** Al volver a abrir, no aparece sola; y Largar desde el último paso larga. */
+async function afterWelcome(t, report, fail, sc) {
+  await sleep(1500);
+  if (!(await t.evaluate(`/Largada|Largaron/.test(document.getElementById('msg').textContent)`))) fail.push('Largar no largó la carrera');
+  await t.send('Page.reload');
+  await sleep(2500);
+  if (await t.evaluate(`document.getElementById('dlg-welcome').open`)) fail.push('volvió a abrirse sola al recargar');
+  report.push({ what: `bienvenida: lo elegido (${sc.name})`, fail, info: {} });
 }
 
 /** Con el service worker instalado, la página vuelve a abrir sin red, y también lo que se carga aparte (ajustes). */
@@ -190,6 +251,7 @@ async function main() {
     for (const sc of SCREENS) {
       console.log(`\n${sc.name} (${sc.w}×${sc.h}${sc.touch ? ', táctil' : ''})`);
       for (const r of await screen(c, base, sc)) bad += print(r);
+      for (const r of await welcome(c, base, sc)) bad += print(r);
     }
     console.log('\nversión instalable');
     bad += print(await offline(c, base));

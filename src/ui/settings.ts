@@ -19,11 +19,12 @@ const appSection = (app: InstallState): string => (app.install || app.ios ? `
       ${app.install ? '<div class="field">Instalar la consola en este aparato<button type="button" data-install>Instalar</button></div>' : ''}
       ${app.ios ? '<p class="hint">En el iPhone o el iPad se instala desde Compartir, con «Agregar a inicio».</p>' : ''}` : '');
 
-export function openSettings(dlg: HTMLDialogElement, cfg: Config, onChange: (c: Config) => void, app: InstallState): void {
+export function openSettings(dlg: HTMLDialogElement, cfg: Config, onChange: (c: Config) => void, app: InstallState, welcome: () => void): void {
   const vibrate = canVibrate();
   dlg.innerHTML = `
     <form method="dialog">
       <h2>Ajustes</h2>
+      <div class="field">Volante, pantalla y dificultad, con dibujos<button type="button" data-welcome>Ver la bienvenida</button></div>
       <h3>Perfiles</h3>
       <div class="field"><select name="profile" aria-label="Perfil guardado"></select><span class="row"><button type="button" data-load>Usar</button><button type="button" data-del>Borrar</button></span></div>
       <div class="field"><input name="pname" type="text" maxlength="30" placeholder="Nombre del perfil" aria-label="Nombre del perfil"><button type="button" data-save>Guardar</button></div>
@@ -123,6 +124,7 @@ export function openSettings(dlg: HTMLDialogElement, cfg: Config, onChange: (c: 
   });
   btn('del').addEventListener('click', () => { deleteProfile(sl('profile').value); listProfiles(); });
   btn('reset').addEventListener('click', () => apply({ ...DEFAULTS, circuit: cfg.circuit, name: cfg.name }));
+  btn('welcome').addEventListener('click', () => { dlg.close(); welcome(); });
   form.querySelector('[data-install]')?.addEventListener('click', (e) => {
     app.install?.();
     (e.currentTarget as HTMLElement).closest('.field')?.remove();

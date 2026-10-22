@@ -325,3 +325,93 @@ table.results .fast::before { content: " · "; }
   table.results .fast::before { content: none; }
   .chart text { font-size: 16px; }
 }
+
+/* ——— Bienvenida: un paso por pantalla, con el avance arriba y los botones al pie. Alto fijo para que el pie no salte entre pasos. ——— */
+dialog.welcome { max-width: 760px; height: min(640px, calc(100dvh - 32px)); padding-bottom: 0; }
+dialog.welcome[open] { display: flex; flex-direction: column; }
+.wl { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+/* Un poco de aire adentro del cuerpo desplazable: si no, recorta el anillo de foco de las tarjetas del borde. */
+.wl-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; margin: 0 -6px; padding: 0 6px; }
+.wl-body:focus { outline: none; }
+.wl .lead { margin: 0 0 10px; line-height: 1.45; }
+.wl .wl-skip { margin-right: auto; }
+.wl-progress { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.wl-progress ol { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.wl-progress li { width: 22px; height: 4px; border-radius: 2px; background: var(--border); }
+.wl-progress li.done { background: var(--muted); }
+.wl-progress li.now { background: var(--text); }
+.wl-hero svg { display: block; width: min(100%, 340px); height: auto; max-height: 26vh; max-height: 26dvh; margin: 4px auto 8px; }
+.wl-note { margin: 0 0 6px; font-size: 14px; }
+.field.col { flex-direction: column; align-items: stretch; gap: 4px; }
+.field.col input { flex: none; }
+/* Lo que se elige tocando una tarjeta: el radio cubre la tarjeta entera, invisible, así el toque y el teclado caen en él. */
+.pick { position: relative; cursor: pointer; }
+.pick > input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.wl-arrow { width: 36px; padding: 0; display: grid; place-items: center; }
+.wl-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wl-track {
+  --card: min(380px, 72%);
+  display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none;
+  padding: 8px calc(50% - var(--card) / 2);
+}
+.wl-track::-webkit-scrollbar { display: none; }
+.wl-card { flex: 0 0 var(--card); scroll-snap-align: center; padding: 10px; border-radius: 12px; background: var(--surface-2); border: 2px solid transparent; opacity: 0.55; transform: scale(0.9); transition: opacity 0.2s, transform 0.2s; }
+.wl-card:has(input:checked) { opacity: 1; transform: none; border-color: var(--text); }
+.wl-card svg { display: block; width: 100%; height: auto; }
+.pick:has(input:focus-visible) { outline: 2px solid #378add; outline-offset: 2px; }
+.wl-nav { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 4px; }
+.wl-name { text-align: center; margin: 0; font-size: 15px; min-width: 12em; }
+.wl-name b { font-weight: 500; }
+.wl-layouts { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 8px; align-items: start; }
+.wl-pick { display: grid; gap: 6px; padding: 6px; border-radius: 10px; border: 2px solid transparent; background: var(--surface-2); font-size: 13px; text-align: center; line-height: 1.25; }
+.wl-pick:has(input:checked) { border-color: var(--text); font-weight: 500; }
+.diagram { display: block; width: 100%; height: auto; max-height: 28vh; max-height: 28dvh; }
+.dg-frame { fill: var(--bg); stroke: var(--border); vector-effect: non-scaling-stroke; }
+.dg-pill { fill: var(--surface-2); }
+.dg-panel { fill: var(--surface); }
+.dg-loop { fill: none; stroke: var(--text); stroke-width: 1.5; stroke-linejoin: round; }
+.dg-road { fill: none; stroke: var(--muted); stroke-width: 5; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.dg-road3 { fill: var(--surface-2); stroke: var(--muted); vector-effect: non-scaling-stroke; }
+.dg-hz, .dg-mid { stroke: var(--muted); stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.dg-car { fill: #378add; }
+.wl-say { margin: 8px 0 4px; font-size: 14px; line-height: 1.45; min-height: 2.9em; }
+.wl-say b { font-weight: 500; }
+.wl-say.fit { min-height: 0; }
+.wl-facts { margin: 4px 0 6px; padding-left: 20px; font-size: 14px; line-height: 1.45; display: grid; gap: 3px; }
+/* Dos o tres opciones excluyentes en una fila: radios con forma de segmentado. */
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; flex: none; }
+.seg label { position: relative; }
+.seg label + label { border-left: 1px solid var(--border); }
+.seg input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.seg span { display: grid; place-items: center; height: 32px; padding: 0 14px; font-size: 13px; }
+.seg input:checked + span { background: var(--text); color: var(--bg); font-weight: 500; }
+.seg input:focus-visible + span { outline: 2px solid #378add; outline-offset: -2px; }
+.seg.wide { display: flex; }
+.seg.wide label { flex: 1; }
+.wl-sum { margin: 4px 0 8px; display: grid; gap: 2px; }
+.wl-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 2px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.wl-row dt { color: var(--muted); }
+.wl-row dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .wl-card { transition: none; } }
+@media (pointer: coarse) { .seg span { height: 44px; font-size: 14px; } .wl-arrow { width: 44px; } }
+/* Teléfono vertical: la hoja ocupa todo el alto. */
+@media (max-width: 599px) {
+  dialog.welcome { height: calc(100dvh - max(16px, env(safe-area-inset-top))); max-height: none; }
+  .wl-track { --card: 86%; }
+  .wl-row { grid-template-columns: 78px minmax(0, 1fr) auto; }
+  .wl-progress ol li { width: 14px; }
+}
+/* Apaisado: poco alto. Sin la explicación de arriba en el carrusel y los diagramas, y el volante más bajo. */
+@media (max-height: 499px) {
+  dialog.welcome { height: calc(100dvh - 16px); margin: auto; padding-top: 10px; }
+  dialog.welcome .actions { padding-top: 8px; padding-bottom: max(8px, env(safe-area-inset-bottom)); margin-top: 8px; }
+  .wl-progress { margin-bottom: 2px; }
+  .wl h2 { margin-bottom: 4px; font-size: 16px; }
+  .wl .lead { display: none; }
+  .wl-hero svg { width: auto; height: 72px; }
+  .wl-note { display: none; }
+  .wl-track { --card: 170px; padding-top: 2px; padding-bottom: 2px; }
+  .wl-sum { grid-template-columns: 1fr 1fr; column-gap: 16px; }
+  .diagram { max-height: 84px; }
+  .wl-say { min-height: 0; margin-top: 4px; }
+}
