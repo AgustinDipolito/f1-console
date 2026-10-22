@@ -3,6 +3,30 @@
 Juego web de carreras contra un bot en circuitos reales. El auto se maneja solo: vos operás su computadora.
 ## Try it out at: https://agustindipolito.github.io/f1-console/
 
+## Cómo se ve
+
+Tres distribuciones de pantalla, a elegir en Ajustes. Abajo del volante, un renglón por tramo dice qué salió bien o qué control pedía otra cosa.
+
+**Automática:** el mapa del circuito al lado de la consola.
+
+![Distribución automática en la computadora](docs/capturas/auto-pc.png)
+
+**Volante delante del mapa:** el mapa sigue a tu auto con el sentido de marcha hacia arriba y el volante tapa la parte de abajo, como desde el asiento.
+
+![Volante delante del mapa](docs/capturas/cockpit-pc.png)
+
+**Mapa en el volante:** el circuito va en la pantalla del volante y las lecturas de la pantalla pasan a un renglón arriba.
+
+![Mapa en el volante](docs/capturas/screen-pc.png)
+
+En el teléfono la pantalla de juego entra entera, sin desplazar:
+
+<p>
+  <img src="docs/capturas/auto-tel.png" alt="Automática en el teléfono" width="32%">
+  <img src="docs/capturas/cockpit-tel.png" alt="Volante delante del mapa en el teléfono" width="32%">
+  <img src="docs/capturas/screen-tel.png" alt="Mapa en el volante en el teléfono" width="32%">
+</p>
+
 ## Arrancar
 
 Requiere Node 20 o superior.
