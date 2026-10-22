@@ -1,7 +1,7 @@
 import { PHYS, START, STEER, aAcc, TEMP_TARGET, POWER, ERS_BOOST, batteryRate, TYRE, FUEL, FAULT } from './physics';
 import { score, efficiency, idealBal } from './score';
 import { TEL_DS, emptyLap } from './telemetry';
-import type { Car, Controls, Rec, Seg, Track, Vec2 } from './types';
+import type { Car, Controls, Difficulty, Rec, Seg, Track, Vec2 } from './types';
 
 /** Generador sembrado (mulberry32): devuelve el número y el estado siguiente. */
 export function rand(state: number): [number, number] {
@@ -11,18 +11,18 @@ export function rand(state: number): [number, number] {
   return [((t ^ (t >>> 14)) >>> 0) / 4294967296, s];
 }
 
-export const fuelLoad = (tr: Track, laps: number): number => laps * tr.len * FUEL.BURN * FUEL.LOAD;
+export const fuelLoad = (tr: Track, laps: number, d: Difficulty = 'normal'): number => laps * tr.len * FUEL.BURN * FUEL.LOAD[d];
 /** Metros que le faltan para cerrar la carrera. */
 export const remaining = (tr: Track, c: Car, laps: number): number => Math.max(0, (laps - c.laps) * tr.len - c.s);
 /** Nafta que hace falta para terminar con la mezcla dada (multiplicador de FUEL.MIX). */
 export const fuelNeed = (tr: Track, c: Car, laps: number, mix: number): number => remaining(tr, c, laps) * FUEL.BURN * mix;
 export const grip = (tyre: number): number => TYRE.GRIP_MIN + (1 - TYRE.GRIP_MIN) * (tyre / 100);
 
-export function newCar(tr: Track, gridGap: number, lat: number, laps = 3, seed = 1): Car {
+export function newCar(tr: Track, gridGap: number, lat: number, laps = 3, seed = 1, d: Difficulty = 'normal'): Car {
   const s = tr.len - gridGap;
   return {
     s, lat, v: 0, laps: -1, lapT0: 0, last: null, best: null, done: false, fin: null, bat: START.BAT, temp: START.TEMP, eff: START.EFF, sc: 1, off: 0, ty: 's', trail: [], tq: s,
-    tyre: 100, fuel: fuelLoad(tr, laps), fuel0: fuelLoad(tr, laps), fuse: [false, false, false], fuseT: [0, 0, 0], rstSeen: [0, 0, 0], rng: seed, tel: emptyLap(tr.len), hist: [],
+    tyre: 100, fuel: fuelLoad(tr, laps, d), fuel0: fuelLoad(tr, laps, d), fuse: [false, false, false], fuseT: [0, 0, 0], rstSeen: [0, 0, 0], rng: seed, tel: emptyLap(tr.len), hist: [],
   };
 }
 

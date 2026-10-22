@@ -14,6 +14,8 @@ export interface GaugeSource {
   steer: number;
   /** Cuánto falta para el tramo siguiente dentro de la anticipación: 0 recién avisado, 1 en el cambio. */
   lead: number;
+  /** Segundos reales que faltan para el tramo siguiente, con el indicador prendido; si no, 0. */
+  eta: number;
   /** Puntaje de la consola en el tramo actual y si el auto está corriendo. */
   sc: number;
   live: boolean;
@@ -27,7 +29,7 @@ export interface ConsoleFx { leds: boolean; aim: boolean; flash: boolean; delta:
 export const defaultPanel = (): PanelState => ({ lev: 1, ers: 1, bal: 56, lim: false, grd: false, dif: 1, eb: 1, rst: [0, 0, 0] });
 export const idleGauges = (): GaugeSource => ({
   bat: START.BAT, temp: START.TEMP, tyre: 100, fuel: 1, fuelMax: 1, fuelLaps: 0, fuse: [false, false, false],
-  ty: 's', next: 's', dist: Infinity, soon: false, hint: {}, steer: 0, lead: 0, sc: 1, live: false, delta: null, bal: BAL.FULL,
+  ty: 's', next: 's', dist: Infinity, soon: false, hint: {}, steer: 0, lead: 0, eta: 0, sc: 1, live: false, delta: null, bal: BAL.FULL,
 });
 
 export const DELTA_COLORS = { gain: 0x1d9e75, lose: 0xe24b4a };

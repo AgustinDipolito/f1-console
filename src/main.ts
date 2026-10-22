@@ -363,13 +363,13 @@ function gauges(r: Race): GaugeSource {
   const p = r.player, tr = r.track, a = ahead(tr, p.s), perLap = tr.len * FUEL.BURN * FUEL.MIX[1];
   const look = Math.max(p.v, 10) * LOOKAHEAD_T, soon = r.green && a.dist < look;
   return {
-    bat: p.bat, temp: p.temp, tyre: p.tyre, fuel: p.fuel, fuelMax: fuelLoad(tr, r.opts.laps),
+    bat: p.bat, temp: p.temp, tyre: p.tyre, fuel: p.fuel, fuelMax: fuelLoad(tr, r.opts.laps, r.opts.difficulty),
     fuelLaps: (p.fuel - fuelNeed(tr, p, r.opts.laps, FUEL.MIX[1])) / perLap,
     fuse: p.fuse, ty: p.ty, next: a.ty, dist: a.dist, soon,
     hint: cfg.assist && r.phase !== 'done' ? hints(soon ? a.ty : p.ty, p.fuse, balWant(p)) : {},
     // En difícil el volante gira con el auto: los botones se mueven bajo el puntero.
     steer: r.opts.difficulty === 'hard' && r.green ? steer(tr, p.s) : 0,
-    lead: soon ? 1 - a.dist / look : 0, sc: p.sc, live: r.green && !p.done, delta: lapDelta(r), bal: balWant(p),
+    lead: soon ? 1 - a.dist / look : 0, eta: soon ? a.dist / Math.max(p.v, 1) / timeScale() : 0, sc: p.sc, live: r.green && !p.done, delta: lapDelta(r), bal: balWant(p),
   };
 }
 

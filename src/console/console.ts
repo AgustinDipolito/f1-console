@@ -79,11 +79,11 @@ const ease = (c: number, t: number, k: number): number => c + (t - c) * k;
 const isRotary = (c: string): c is (typeof ROTARIES)[number][0] => ROTARIES.some(([kn]) => kn === c);
 
 type Align = 'down' | 'up' | 'in' | 'left' | 'right';
-interface Label { obj: THREE.Object3D; local: THREE.Vector3; value: () => string; el: HTMLDivElement; valEl: HTMLDivElement; align: Align; knob?: Knob; hinted: boolean; stagger: boolean; when?: () => boolean }
+interface Label { obj: THREE.Object3D; local: THREE.Vector3; value: () => string; el: HTMLDivElement; name: string; nEl: HTMLDivElement; valEl: HTMLDivElement; align: Align; knob?: Knob; hinted: boolean; stagger: boolean; when?: () => boolean }
 /** Etiquetas de rotativos que en caja chica pasan arriba de su perilla, alternadas con las de abajo. */
 const ROT_UP = 2 * 17;
 
-const KNOB_OF: Record<string, Knob> = { Potencia: 'lev', ERS: 'ers', Frenos: 'bal', Diferencial: 'dif', 'Freno motor': 'eb' };
+const KNOB_OF: Record<string, Knob> = { Potencia: 'lev', ERS: 'ers', Frenos: 'bal', Diferencial: 'dif', 'Frenos M': 'eb' };
 const knobText = (k: Knob, v: number): string => (k === 'bal' ? `${v} %` : cap(KNOB_NAMES[k][v]));
 const ALIGN: Record<Align, string> = {
   down: 'translate(-50%, 4px)', up: 'translate(-50%, calc(-100% - 4px))', in: 'translate(0, -50%)',
@@ -550,7 +550,7 @@ export class ConsoleView {
         return out.length ? `Saltó ${out.join(', ')}` : 'En orden';
       }, 'right'],
       ...ROTARIES.map(([kn, x]): [THREE.Vector3, string, () => string, Align] => [
-        at(x, ROT_Y - 17), ({ lev: 'Potencia', ers: 'ERS', dif: 'Diferencial', eb: 'Freno motor' } as const)[kn], () => cap(N[kn][P[kn]]), 'down']),
+        at(x, ROT_Y - 17), ({ lev: 'Potencia', ers: 'ERS', dif: 'Diferencial', eb: 'Frenos M' } as const)[kn], () => cap(N[kn][P[kn]]), 'down']),
     ];
     this.labelBox.replaceChildren();
     this.labels = defs.map(([local, name, value, align]) => {
@@ -564,18 +564,20 @@ export class ConsoleView {
       el.append(n, v);
       this.labelBox.appendChild(el);
       // Rotativos pares: en caja chica su etiqueta va arriba de la perilla, así dos sugerencias vecinas no se pisan.
-      const stagger = ['Potencia', 'Freno motor'].includes(name);
-      return { obj: f, local, value, el, valEl: v, align, knob: KNOB_OF[name], hinted: false, stagger, when: name === 'Delta' ? () => this.fx.delta : undefined };
+      const stagger = ['Potencia', 'Frenos M'].includes(name);
+      return { obj: f, local, value, el, name, nEl: n, valEl: v, align, knob: KNOB_OF[name], hinted: false, stagger, when: name === 'Delta' ? () => this.fx.delta : undefined };
     });
     this.refreshLabels();
   }
 
   private refreshLabels(): void {
-    const hint = this.gauges.hint;
+    const { hint, soon, eta } = this.gauges;
     for (const l of this.labels) {
       const to = l.knob ? hint[l.knob] : undefined;
       l.hinted = to !== undefined;
       l.el.classList.toggle('hint', l.hinted);
+      // Con el tramo siguiente a la vista, la sugerencia cuenta cuánto falta para cambiar: ni antes ni después.
+      setText(l.nEl, l.hinted && soon ? `${l.name} ${f1(eta)} s` : l.name);
       // La posición actual ya se ve en la pieza: la sugerencia muestra solo a dónde ir, así no se pisan las etiquetas vecinas.
       setText(l.valEl, l.hinted ? `→ ${knobText(l.knob as Knob, to as number)}` : l.value());
     }

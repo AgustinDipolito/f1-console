@@ -81,6 +81,8 @@ Hecho (octubre de 2026)
 
 - Octubre de 2026: balance de frenos que cambia con la nafta, con marca azul en la barra Frenos y la etiqueta «56 → 58 %». Teclas Q (ERS) y W (potencia) en el orden en que se ven. El motor se calla al pasar la meta. Los volantes y pistas rehechos sueltan su contexto WebGL (`forceContextLoss`): acumulados, impedían crear la pista 3D.
 
+- Octubre de 2026: en modo fácil, con el tramo siguiente a la vista, cada etiqueta sugerida cuenta los segundos reales que faltan para el cambio («ERS 1,7 s», `eta` en `GaugeSource`: distancia sobre velocidad actual, dividida por la velocidad del tiempo). El rotativo de freno motor se llama «Frenos M». La carga de nafta depende de la dificultad (`FUEL.LOAD`): fácil 1,2 veces lo que se gasta en normal (alcanza en push toda la carrera), normal 1,12 y difícil 1,05; los bots cargan lo mismo. El service worker instala con `cache: 'reload'`: Pages da `max-age=600` y sin eso una versión nueva podía guardar el `index.html` viejo, que pedía partes borradas («No se pudo cargar la consola»).
+
 Pendiente
 - Multijugador: sin servidor TURN, en algunas redes de empresa o de celular los navegadores no conectan. Si pasa seguido, sumar `turnConfig` en `net/room.ts`. Una pestaña oculta frena su auto (el loop corre con requestAnimationFrame).
 - Contrastar la calibración con partidas de personas reales. Hoy las bandas salen de jugadores modelo: el humano tiene un segundo de reacción, error de ±2,5 % en frenos y tarda 6 s en rearmar un fusible. La caja negra ya registra lo necesario para medirlo: falta exportar la carrera y que `npm run calibrate` corra contra un `BotLevel` medido.

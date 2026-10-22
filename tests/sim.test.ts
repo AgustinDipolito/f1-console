@@ -169,10 +169,13 @@ describe('neumáticos y nafta', () => {
     expect(c.v).toBeLessThanOrEqual(FUEL.DRY_V + 1e-6);
   });
 
-  it('la carga alcanza yendo en normal y no yendo en push todo el tiempo', () => {
+  it('la carga alcanza yendo en normal; en push todo el tiempo, solo en fácil', () => {
     const need = (mix: number): number => 3 * track.len * FUEL.BURN * mix;
-    expect(fuelLoad(track, 3)).toBeGreaterThan(need(FUEL.MIX[1]));
-    expect(fuelLoad(track, 3)).toBeLessThan(need(FUEL.MIX[2]));
+    for (const d of ['easy', 'normal', 'hard'] as const) expect(fuelLoad(track, 3, d)).toBeGreaterThan(need(FUEL.MIX[1]));
+    expect(fuelLoad(track, 3, 'easy')).toBeGreaterThan(need(FUEL.MIX[2]));
+    expect(fuelLoad(track, 3, 'normal')).toBeLessThan(need(FUEL.MIX[2]));
+    expect(fuelLoad(track, 3, 'hard')).toBeLessThan(fuelLoad(track, 3, 'normal'));
+    expect(fuelLoad(track, 3, 'normal')).toBeLessThan(fuelLoad(track, 3, 'easy'));
   });
 });
 

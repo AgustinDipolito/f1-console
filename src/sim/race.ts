@@ -49,8 +49,8 @@ export class Race {
 
   reset(): void {
     const L = this.opts.laps, seed = this.opts.seed ?? 1;
-    this.player = newCar(this.track, 6, -2, L, seed);
-    this.bots = Array.from({ length: Math.max(0, this.opts.bots) }, (_, i) => { const g = gridSlot(i); return newCar(this.track, g.gap, g.lat, L, seed + 101 * (i + 1)); });
+    this.player = newCar(this.track, 6, -2, L, seed, this.opts.difficulty);
+    this.bots = Array.from({ length: Math.max(0, this.opts.bots) }, (_, i) => { const g = gridSlot(i); return newCar(this.track, g.gap, g.lat, L, seed + 101 * (i + 1), this.opts.difficulty); });
     this.remote = [];
     this.phase = 'grid';
     this.t = 0;

@@ -89,7 +89,7 @@ const alertas = (): string => `
   </ul>
   <h3>Desgaste</h3>
   <ul class="rows">
-    <li>${gauge(26)}<div><b>Nafta</b> No alcanza para ir en push toda la carrera. El medidor dice cuánto sobra o falta yendo en normal.</div></li>
+    <li>${gauge(26)}<div><b>Nafta</b> En normal y difícil no alcanza para ir en push toda la carrera; en fácil, sí. El medidor dice cuánto sobra o falta yendo en normal.</div></li>
     <li>${gauge(14)}<div><b>Gomas</b> Se gastan más en push y con la curva mal configurada.</div></li>
   </ul>`;
 

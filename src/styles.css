@@ -100,6 +100,7 @@ dialog.wide { max-width: 640px; }
 .laps th { font-weight: 500; color: var(--muted); }
 .label.hint { border-color: #378add; box-shadow: 0 0 0 1px #378add; }
 .label.hint .v { color: #1f6fbf; font-weight: 600; }
+.label.hint .n { font-variant-numeric: tabular-nums; }
 :root[data-theme="dark"] .label.hint .v { color: #7fb6ec; }
 .tag { position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 11px; line-height: 1.2; padding: 1px 5px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); }
 .tag.mine { background: #378add; border-color: #378add; color: #fff; font-weight: 600; }

@@ -52,8 +52,8 @@ export const FUEL = {
   /** Consumo en normal (kg por metro) y multiplicador por posición de potencia. */
   BURN: 0.0016,
   MIX: [0.8, 1, 1.15],
-  /** Carga: cuántas veces lo que se gasta yendo en normal toda la carrera. */
-  LOAD: 1.05,
+  /** Carga por dificultad: cuántas veces lo que se gasta yendo en normal toda la carrera. En fácil alcanza hasta en push todo el tiempo. */
+  LOAD: { easy: 1.2, normal: 1.12, hard: 1.05 },
   /** Pérdida de aceleración por kg. */
   WEIGHT: 0.0008,
   /** Sin nafta: potencia que queda y velocidad tope (m/s). */

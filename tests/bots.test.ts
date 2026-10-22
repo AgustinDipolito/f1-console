@@ -53,7 +53,7 @@ describe('nafta en Gálvez', () => {
 
   it('el consumo por vuelta es el mismo que en cualquier otro trazado: BURN por metro', () => {
     const per = galvez.len * FUEL.BURN;
-    expect(fuelLoad(galvez, 3) / per).toBeCloseTo(3 * FUEL.LOAD, 6);
+    expect(fuelLoad(galvez, 3) / per).toBeCloseTo(3 * FUEL.LOAD.normal, 6);
     expect(galvez.len).toBeGreaterThan(4000);
     expect(galvez.len).toBeLessThan(4600);
   });
