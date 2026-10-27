@@ -60,6 +60,16 @@ button.primary:active { background: color-mix(in srgb, var(--text) 85%, var(--bg
 #race-times { font-size: 12px; color: var(--muted); }
 .panel > .hint .for-touch { display: none; }
 @media (pointer: coarse) { .panel > .hint .for-touch { display: inline; } .panel > .hint .for-mouse { display: none; } }
+/* Macros: arriba a la derecha de la consola, donde el volante no tiene controles. En la computadora en fila sobre el volante;
+   en el teléfono en columna sobre la empuñadura derecha, a más de 97 mm del centro (fuera del área del limitador). */
+.macros { position: absolute; top: 4px; right: 4px; z-index: 2; display: flex; gap: 6px; }
+.macros[hidden] { display: none; }
+.macros button { padding: 0 10px; font-size: 12px; background: var(--surface-2); }
+.macros button[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--bg); }
+@media (max-width: 599px), (max-height: 499px) {
+  .macros { flex-direction: column; }
+  .macros button { width: 48px; padding: 0 4px; font-size: 11px; }
+}
 .labels { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
 .label { position: absolute; left: 0; top: 0; white-space: nowrap; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; line-height: 1.3; text-align: center; }
 .label .n { font-size: 11px; color: var(--muted); }
@@ -187,6 +197,33 @@ dialog.tel { max-width: 760px; margin: 6vh auto auto; max-height: 88vh; }
 .stat b { font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .stat.loss b { color: #b3261e; }
 :root[data-theme="dark"] .stat.loss b { color: #f2918a; }
+/* Repetición: línea de tiempo con la escala del gráfico, barra, controles y el mapa chico con la lectura en ese punto. */
+.chart .cursor, .tl-cur { stroke: var(--text); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.tl { display: block; width: 100%; height: auto; margin: 2px 0 0; }
+.tl-seg { stroke: var(--muted); vector-effect: non-scaling-stroke; }
+.tl-ev { stroke: var(--text); vector-effect: non-scaling-stroke; }
+.tl-mac, .tl-fuse { fill: var(--text); }
+.tl-loss, .rp-loss { fill: var(--surface); stroke: var(--text); vector-effect: non-scaling-stroke; }
+.tl-hot { fill: #e24b4a; }
+/* ponytail: el pulgar nativo se corre unos px en las puntas respecto de las marcas; si molesta, pulgar propio. */
+.rp-range { display: block; width: calc(448 / 520 * 100%); margin: 0 0 0 calc(44 / 520 * 100%); height: 32px; accent-color: var(--text); }
+.rp-ctl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
+.rp-body { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 12px; align-items: start; }
+.rp-map { width: 100%; height: auto; max-height: 180px; }
+.rp-road { fill: none; stroke: var(--muted); stroke-width: 3; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.rp-car { fill: #378add; }
+.rp-read { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; margin: 0; font-size: 13px; }
+.rp-read div { display: flex; justify-content: space-between; gap: 6px; min-width: 0; padding: 2px 0; border-bottom: 1px solid var(--border); }
+.rp-read dt { color: var(--muted); }
+.rp-read dd { margin: 0; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmp-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 8px; }
+.cmp-list > li { border-top: 1px solid var(--border); padding-top: 6px; font-size: 13px; }
+.cmp-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.cmp-head b { font-weight: 500; font-size: 14px; }
+.cmp-gain { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cmp-ev { margin: 2px 0 0; padding-left: 18px; line-height: 1.5; color: var(--muted); }
+@media (max-width: 480px) { .rp-body { grid-template-columns: 1fr; } .rp-map { max-height: 120px; } }
+@media (pointer: coarse) { .rp-range { height: 44px; } .rp-ctl .seg span { min-width: 44px; padding: 0; } .tel button.link { min-height: 44px; min-width: 44px; padding: 0 10px; } }
 .causes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .causes li { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 56px; align-items: center; gap: 10px; font-size: 13px; }
 .causes .bar { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
@@ -209,6 +246,14 @@ table.results th { text-align: left; font-weight: 500; color: var(--muted); padd
 table.results td { padding: 5px 6px; border-top: 1px solid var(--border); }
 table.results tr.me td { font-weight: 600; }
 table.results .fast::before { content: " · "; }
+table.results .trait { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
+/* Veredicto del modo: el color del borde es el dato (verde, rojo o gris) y el título lo dice en palabras. */
+.verdict { margin: 6px 0 10px; padding: 2px 0 2px 10px; border-left: 3px solid var(--border); }
+.verdict.ok { border-color: #1d9e75; }
+.verdict.no { border-color: #e24b4a; }
+.verdict b { display: block; font-size: 16px; font-weight: 500; }
+.verdict ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.key { margin: 8px 0 0; font-size: 13px; line-height: 1.45; }
 
 /* Comentarios bajo el volante: un renglón por tramo, el más nuevo arriba y los anteriores más tenues. Alto fijo para que el volante
    no salte al llegar un renglón; 3 en la computadora, 2 en el teléfono vertical y 1 apaisado. El punto es el dato: verde bien, rojo mal. */
@@ -299,7 +344,7 @@ table.results .fast::before { content: " · "; }
 /* Vertical: el mapa arriba con lo que sobre, la consola abajo con el alto que pide el frente del volante (208 × 182 mm). */
 @media (max-width: 599px) {
   .bar .grow { flex-basis: 100%; height: 0; }
-  .bar .act { flex: 1 1 0; min-width: 0; }
+  .bar .act { flex: 1 1 auto; min-width: 44px; }
   #circuit { flex: 1 1 0; min-width: 0; }
   .layout.auto { display: flex; flex-direction: column; }
   .layout.auto > .panel:first-child { flex: 1 1 0; min-height: 150px; }
@@ -348,8 +393,8 @@ dialog.welcome[open] { display: flex; flex-direction: column; }
 /* Lo que se elige tocando una tarjeta: el radio cubre la tarjeta entera, invisible, así el toque y el teclado caen en él. */
 .pick { position: relative; cursor: pointer; }
 .pick > input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.wl-arrow { width: 36px; padding: 0; display: grid; place-items: center; }
-.wl-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wl-arrow, button.ico { width: 36px; padding: 0; display: grid; place-items: center; }
+.wl-arrow svg, button.ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .wl-track {
   --card: min(380px, 72%);
   display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none;
@@ -394,7 +439,7 @@ dialog.welcome[open] { display: flex; flex-direction: column; }
 .wl-row dt { color: var(--muted); }
 .wl-row dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) { .wl-card { transition: none; } }
-@media (pointer: coarse) { .seg span { height: 44px; font-size: 14px; } .wl-arrow { width: 44px; } }
+@media (pointer: coarse) { .seg span { height: 44px; font-size: 14px; } .wl-arrow, button.ico { width: 44px; } }
 /* Teléfono vertical: la hoja ocupa todo el alto. */
 @media (max-width: 599px) {
   dialog.welcome { height: calc(100dvh - max(16px, env(safe-area-inset-top))); max-height: none; }
@@ -416,3 +461,15 @@ dialog.welcome[open] { display: flex; flex-direction: column; }
   .diagram { max-height: 84px; }
   .wl-say { min-height: 0; margin-top: 4px; }
 }
+
+/* Modo: una tarjeta por modo con el radio encima; los desafíos en lista, cada uno con su botón. Va después de .pick, que pone flex y letra gris. */
+.modes-list { display: grid; gap: 8px; margin: 8px 0 10px; }
+.mode { display: grid; gap: 2px; padding: 8px 12px; border-radius: 10px; border: 2px solid transparent; background: var(--surface-2); font-size: 14px; line-height: 1.4; color: var(--text); }
+.mode:has(input:checked) { border-color: var(--text); }
+.mode b, .chal b { font-weight: 500; }
+.mode span { font-size: 13px; color: var(--muted); }
+.chal-list { list-style: none; margin: 4px 0; padding: 0; display: grid; gap: 8px; }
+.chal { display: grid; gap: 4px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: 14px; line-height: 1.45; }
+.chal p { margin: 0; }
+.chal[aria-current] { box-shadow: inset 0 0 0 2px var(--text); }
+.chal .row { justify-content: flex-end; }

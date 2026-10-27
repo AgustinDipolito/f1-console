@@ -1,6 +1,7 @@
 import { START } from '../sim/physics';
 import { BAL, type Knob } from '../sim/score';
 import type { Controls, Seg } from '../sim/types';
+import { KNOB_LABEL, KNOB_NAMES } from '../ui/format';
 
 /** Estado de la consola y lo que muestra. Sin three: lo leen main y la ayuda sin cargar el volante 3D. */
 export interface PanelState extends Controls { grd: boolean }
@@ -31,6 +32,21 @@ export const idleGauges = (): GaugeSource => ({
   bat: START.BAT, temp: START.TEMP, tyre: 100, fuel: 1, fuelMax: 1, fuelLaps: 0, fuse: [false, false, false],
   ty: 's', next: 's', dist: Infinity, soon: false, hint: {}, steer: 0, lead: 0, eta: 0, sc: 1, live: false, delta: null, bal: BAL.FULL,
 });
+
+/** Un atajo de la consola: lleva potencia y ERS de una sola vez. El orden es el de los eventos de la traza (índice = `Ev.v` de 'macro'). */
+export interface Macro { id: 'ataque' | 'conserva'; name: string; set: Partial<Pick<Controls, 'lev' | 'ers'>>; key: string }
+export const MACROS: Macro[] = [
+  { id: 'ataque', name: 'Ataque', set: { lev: 2, ers: 2 }, key: 'z' },
+  { id: 'conserva', name: 'Ahorro', set: { lev: 0, ers: 0 }, key: 'x' },
+];
+const macroKeys = (m: Macro): ('lev' | 'ers')[] => Object.keys(m.set) as ('lev' | 'ers')[];
+/** La consola ya está como la deja el macro. */
+export const macroActive = (p: Controls, m: Macro): boolean => macroKeys(m).every((k) => p[k] === m.set[k]);
+/** Lleva potencia y ERS a lo del macro sobre el PanelState compartido y devuelve siempre el mismo texto: aplicarlo dos veces da lo mismo. */
+export function applyMacro(p: PanelState, m: Macro): string {
+  macroKeys(m).forEach((k) => { p[k] = m.set[k] as number; });
+  return `${m.name}: ${macroKeys(m).map((k) => `${KNOB_LABEL[k]} ${KNOB_NAMES[k][m.set[k] as number]}`).join(', ')}`;
+}
 
 export const DELTA_COLORS = { gain: 0x1d9e75, lose: 0xe24b4a };
 /** LEDs de cambio por grupo: recta, frenada, curva, salida. */

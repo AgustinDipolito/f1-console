@@ -9,7 +9,7 @@ import { KNOB_LABEL, KNOB_NAMES, SEG_NAMES, cap } from './format';
  * soon: ya se ve el tramo siguiente (la anticipación de los LEDs); ahí preparar la consola no se avisa como error.
  */
 export interface Sample { ty: Seg; ctl: Controls; fuse: boolean[]; bat: number; bal: number; temp: number; soon?: boolean }
-export interface Line { text: string; good: boolean }
+export interface Line { text: string; good: boolean; info?: boolean }
 
 /** Puntaje promedio del tramo a partir del cual se da por bien hecho: deja pasar el tiempo de reacción en un tramo corto. */
 export const GOOD = 0.95;
@@ -76,6 +76,9 @@ export class Coach {
     this.streak = 0;
     if (!s.warned) this.say(why(s, next), false);
   }
+
+  /** Un aviso sin tono (un macro aplicado): va primero y no toca la racha. */
+  note(text: string): void { this.lines = [{ text, good: false, info: true }, ...this.lines].slice(0, this.keep); }
 
   private heat(temp: number): void {
     if (temp >= PHYS.TEMP_LIMIT && !this.hot) { this.hot = true; this.say('Motor caliente: bajá la potencia', false); }

@@ -1,5 +1,5 @@
 import { FUSED, balWant, fuelNeed, idx } from '../sim/car';
-import { FAULT } from '../sim/physics';
+import { FAULT, PHYS } from '../sim/physics';
 import { WANTS } from '../sim/score';
 import type { Car, Controls, Difficulty, Track } from '../sim/types';
 
@@ -24,9 +24,26 @@ export const BOT_LEVELS: Record<Difficulty, BotLevel> = {
 export const SPREAD = 0.25;
 const SPREAD_BY_BOT = [0, -0.5, 0.5, -1, 1, -0.25, 0.25, -0.75, 0.75, 0];
 
+/** Cómo reparte el bot lo que hace bien y mal, sin tocar su nivel (delay y jitter, que dispersa SPREAD). balErr y fix se multiplican; tempCap y fuelMix se suman. */
+export const STYLES: Record<Style, { balErr: number; fix: number; tempCap: number; fuelMix: number }> = {
+  metodico: { balErr: 1, fix: 1, tempCap: 0, fuelMix: 0 },
+  atacante: { balErr: 1.3, fix: 1, tempCap: 1.5, fuelMix: 0 },
+  conservador: { balErr: 0.85, fix: 0.7, tempCap: -1.5, fuelMix: 0.01 },
+  frenador: { balErr: 0.5, fix: 1.2, tempCap: -2, fuelMix: 0 },
+};
+/** Ningún bot aguanta hasta el límite: a 100° el motor pierde eficacia. */
+const TEMP_CAP_MAX = PHYS.TEMP_LIMIT - 0.1;
+
+/** El nivel con el estilo puesto. El metódico es el nivel tal cual (el mismo objeto). */
+export function styled(L: BotLevel, s: Style): BotLevel {
+  if (s === 'metodico') return L;
+  const m = STYLES[s];
+  return { ...L, balErr: L.balErr * m.balErr, fix: L.fix * m.fix, tempCap: Math.min(TEMP_CAP_MAX, L.tempCap + m.tempCap), fuelMix: L.fuelMix + m.fuelMix };
+}
+
 export function botLevel(d: Difficulty, i: number): BotLevel {
   const L = BOT_LEVELS[d], k = 1 + SPREAD * SPREAD_BY_BOT[i % SPREAD_BY_BOT.length];
-  return k === 1 ? L : { ...L, delay: L.delay * k, jitter: L.jitter * k, balErr: L.balErr * k, fix: L.fix * k };
+  return styled(k === 1 ? L : { ...L, delay: L.delay * k, jitter: L.jitter * k, balErr: L.balErr * k, fix: L.fix * k }, botProfile(i).style);
 }
 
 /** Batería mínima para seguir en attack y margen sobre tempCap desde el que pasa a eco. */
@@ -57,3 +74,22 @@ export function botControls(c: Car, tr: Track, t: number, d: Difficulty | BotLev
   });
   return ctl;
 }
+
+/** Estilo de cada bot: cómo reparte lo que hace bien y mal, aparte de su nivel. */
+export type Style = 'metodico' | 'atacante' | 'conservador' | 'frenador';
+/** name: nombre completo; tag: el nombre de pila, para las etiquetas del mapa; trait: una frase. */
+export interface BotProfile { name: string; tag: string; style: Style; trait: string }
+export const STYLE_TRAIT: Record<Style, string> = {
+  metodico: 'Hace cada cambio a tiempo',
+  atacante: 'Aguanta el motor caliente y frena a ojo',
+  conservador: 'Levanta temprano y rearma rápido',
+  frenador: 'Clava los frenos, cuida el motor de más',
+};
+/** Diez nombres inventados. El orden importa: el 0 es metódico (la calibración corre contra él). */
+const NAMES: [string, Style][] = [
+  ['Vera Apex', 'metodico'], ['Nico Ráfaga', 'atacante'], ['Toni Cadencia', 'conservador'], ['Milo Vant', 'frenador'],
+  ['Duna Ferro', 'metodico'], ['Tadeo Grip', 'frenador'], ['Lupe Torque', 'atacante'], ['Kira Lumen', 'conservador'],
+  ['Olmo Cresta', 'metodico'], ['Rufina Vatio', 'atacante'],
+];
+export const BOT_PROFILES: BotProfile[] = NAMES.map(([name, style]) => ({ name, tag: name.split(' ')[0], style, trait: STYLE_TRAIT[style] }));
+export const botProfile = (i: number): BotProfile => BOT_PROFILES[i % BOT_PROFILES.length];

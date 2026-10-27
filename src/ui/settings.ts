@@ -1,4 +1,4 @@
-import { DEFAULTS, deleteProfile, loadProfiles, saveProfile, type Config } from '../config';
+import { DEFAULTS, deleteProfile, loadProfiles, saveProfile, sessionOf, type Config } from '../config';
 import { LIVERIES, RANDOM_LIVERY } from '../console/panel';
 import { canVibrate, type InstallState } from './device';
 
@@ -57,7 +57,7 @@ export function openSettings(dlg: HTMLDialogElement, cfg: Config, onChange: (c: 
       ${chk('fxLosses', 'Pérdidas de la última vuelta en el mapa')}
       ${chk('fxBrakes', 'Discos al rojo en las frenadas (pista 3D)')}
       ${appSection(app)}
-      <p class="hint">Vueltas, bots y fallas se aplican en la próxima largada.</p>
+      <p class="hint">Dificultad, vueltas, bots y fallas se aplican en la próxima largada.</p>
       <div class="actions"><button type="button" data-reset>Restablecer</button><button value="close">Cerrar</button></div>
     </form>`;
   const form = dlg.querySelector('form') as HTMLFormElement;
@@ -120,10 +120,10 @@ export function openSettings(dlg: HTMLDialogElement, cfg: Config, onChange: (c: 
   inp('pname').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
   btn('load').addEventListener('click', () => {
     const p = loadProfiles()[sl('profile').value];
-    if (p) apply({ ...DEFAULTS, ...p, circuit: cfg.circuit, name: cfg.name });
+    if (p) apply({ ...DEFAULTS, ...p, ...sessionOf(cfg) });
   });
   btn('del').addEventListener('click', () => { deleteProfile(sl('profile').value); listProfiles(); });
-  btn('reset').addEventListener('click', () => apply({ ...DEFAULTS, circuit: cfg.circuit, name: cfg.name }));
+  btn('reset').addEventListener('click', () => apply({ ...DEFAULTS, ...sessionOf(cfg) }));
   btn('welcome').addEventListener('click', () => { dlg.close(); welcome(); });
   form.querySelector('[data-install]')?.addEventListener('click', (e) => {
     app.install?.();

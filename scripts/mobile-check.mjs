@@ -1,10 +1,13 @@
 /**
  * Revisión de la página en teléfono, tableta y escritorio con Chrome sin ventana.
  * Sirve dist-web/ (antes: `npm run build:web`), la abre en cada tamaño de pantalla, mide lo que se puede medir
- * y guarda una captura de la pantalla de juego (en la grilla y corriendo), de cada diálogo y de cada paso de la bienvenida del primer ingreso.
+ * y guarda una captura de la pantalla de juego (en la grilla y corriendo), de cada diálogo (Modo también con la lista de desafíos)
+ * y de cada paso de la bienvenida del primer ingreso. En los teléfonos de 360 × 640 y 844 × 340 corre además una carrera de una vuelta a ×3,
+ * captura los resultados y la repetición abierta en la pérdida más cara, y comprueba que la repetición reproduce.
  *
  *   npm run check:mobile                    capturas en la carpeta temporal del sistema
  *   npm run check:mobile -- --out capturas  capturas en ./capturas
+ *   npm run check:mobile -- --only telefono-apaisado  una sola pantalla (y sin la prueba sin conexión)
  *
  * Chrome se busca en los lugares de siempre; si está en otro lado, poné su ruta en la variable CHROME.
  * Sale con código 1 si alguna medida falla. Lo que mide no incluye la forma: las capturas se miran igual.
@@ -17,6 +20,7 @@ import { chrome, sleep, tab } from './chrome.mjs';
 
 const ROOT = resolve('dist-web');
 const outArg = process.argv.indexOf('--out');
+const onlyArg = process.argv.indexOf('--only'), only = onlyArg > 0 ? process.argv[onlyArg + 1] : '';
 const OUT = resolve(outArg > 0 ? process.argv[outArg + 1] : join(tmpdir(), 'consola-mobile'));
 
 /** Teléfonos con la barra del navegador a la vista: es el alto que de verdad queda. */
@@ -27,7 +31,11 @@ const SCREENS = [
   { name: 'tableta', w: 768, h: 1024, touch: true, dpr: 2 },
   { name: 'escritorio', w: 1366, h: 768, touch: false, dpr: 1 },
 ];
-const DIALOGS = [['btn-settings', 'dlg-settings'], ['btn-help', 'dlg-help'], ['btn-tel', 'dlg-tel'], ['btn-multi', 'dlg-multi']];
+/** [botón, diálogo, paso extra, nombre de su captura]. Tocar Desafío en Modo muestra la lista sin cambiar el modo. */
+const DIALOGS = [
+  ['btn-settings', 'dlg-settings'], ['btn-help', 'dlg-help'], ['btn-tel', 'dlg-tel'], ['btn-multi', 'dlg-multi'],
+  ['btn-mode', 'dlg-mode', `document.querySelector('#dlg-mode input[name=mode][value=challenge]').click()`, 'modo-desafios'],
+];
 /** Piso de toque en un aparato táctil (px). */
 const TOUCH_MIN = 44;
 
@@ -53,7 +61,7 @@ const MEASURE = `(() => {
   const de = document.documentElement;
   if (de.scrollWidth > W + 1) fail.push('la página se desborda a lo ancho: ' + de.scrollWidth + ' px en ' + W);
   if (phone && de.scrollHeight > H + 1) fail.push('la pantalla de juego no entra: ' + de.scrollHeight + ' px de alto en ' + H);
-  const ctl = [...document.querySelectorAll('.bar button, .bar select, .panel-head button, .view-btns button')].filter(vis);
+  const ctl = [...document.querySelectorAll('.bar button, .bar select, .panel-head button, .view-btns button, .macros button')].filter(vis);
   for (const c of ctl) {
     const r = rect(c), name = c.getAttribute('aria-label') || c.textContent.trim() || c.id;
     if (touch && Math.min(r.w, r.h) < ${TOUCH_MIN} - 0.5) fail.push('control chico para el dedo: ' + name + ' ' + Math.round(r.w) + '×' + Math.round(r.h));
@@ -68,6 +76,12 @@ const MEASURE = `(() => {
   const bx = rect(box), labels = [...box.querySelectorAll('.label')].filter(vis).map((l) => ({ t: l.textContent, ...rect(l) }));
   for (const l of labels) if (l.x < bx.x - 1 || l.r > bx.r + 1 || l.y < bx.y - 1 || l.b > bx.b + 1) fail.push('etiqueta de la consola cortada por el borde: ' + l.t);
   labels.forEach((a, i) => labels.slice(i + 1).forEach((b) => { if (cross(a, b)) fail.push('etiquetas encimadas: ' + a.t + ' / ' + b.t); }));
+  for (const m of box.querySelectorAll('.macros button')) {
+    if (!vis(m)) continue;
+    const r = rect(m);
+    if (r.x < bx.x - 1 || r.r > bx.r + 1 || r.y < bx.y - 1 || r.b > bx.b + 1) fail.push('macro fuera de la consola: ' + m.textContent);
+    for (const l of labels) if (cross(r, l)) fail.push('macro encima de una etiqueta: ' + m.textContent + ' / ' + l.t);
+  }
   const sizes = new Set();
   for (const el of document.querySelectorAll('.bar *, .layout *')) if (vis(el) && [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) sizes.add(getComputedStyle(el).fontSize);
   info.tamañosDeLetra = [...sizes].sort();
@@ -109,8 +123,10 @@ const CSS_MEASURE = `(async () => {
 })()`;
 
 const LAST = JSON.stringify({ circuit: 'ar-1952', laps: 3, rows: [
-  { pos: 1, name: 'Vos', me: true, fin: 262.4, best: 86.9 }, { pos: 2, name: 'Bot 1', me: false, fin: 263.6, best: 87.2 },
-  { pos: 3, name: 'Bot 2', me: false, fin: 268.1, best: 88.0 }, { pos: 4, name: 'Bot 10', me: false, fin: null, best: 89.3 }] });
+  { pos: 1, name: 'Vos', me: true, fin: 262.4, best: 86.9 },
+  { pos: 2, name: 'Nico Ráfaga', me: false, fin: 263.6, best: 87.2, trait: 'Aguanta el motor caliente y frena a ojo' },
+  { pos: 3, name: 'Toni Cadencia', me: false, fin: 268.1, best: 88.0, trait: 'Levanta temprano y rearma rápido' },
+  { pos: 4, name: 'Rufina Vatio', me: false, fin: null, best: 89.3, trait: 'Aguanta el motor caliente y frena a ojo' }] });
 /** Sin la ayuda del primer ingreso y con una carrera terminada guardada: la tabla de resultados abre al cargar. */
 const FRESH = `try { localStorage.clear(); localStorage.setItem('f1c.help', '1'); localStorage.setItem('f1c.last', ${JSON.stringify(LAST)}); } catch {}`;
 const READY = `!!document.querySelector('#console canvas') && /Listo|prueba/.test(document.getElementById('msg').textContent)`;
@@ -139,18 +155,65 @@ async function screen(c, base, sc) {
   await take('grilla', MEASURE);
   await take('hoja de estilo', CSS_MEASURE);
   await shot('grilla');
-  for (const [btn, dlg] of DIALOGS) {
+  for (const [btn, dlg, then, thenName] of DIALOGS) {
+    const name = dlg === 'dlg-mode' ? 'modo' : dlg.slice(4);
     await t.evaluate(`document.getElementById('${btn}').click()`);
     await t.until(`document.getElementById('${dlg}').open`, 5000);
     await sleep(300);
-    await take(dlg.slice(4), DIALOG_MEASURE(dlg));
-    await shot(dlg.slice(4));
+    await take(name, DIALOG_MEASURE(dlg));
+    await shot(name);
+    if (then) {
+      await t.evaluate(then);
+      await sleep(300);
+      await take(thenName, DIALOG_MEASURE(dlg));
+      await shot(thenName);
+    }
     await t.evaluate(`document.getElementById('${dlg}').close()`);
   }
   await t.evaluate(`document.getElementById('go').click()`);
   await sleep(7000);
   await take('carrera', MEASURE);
   await shot('carrera');
+  await t.close();
+  return report;
+}
+
+/** Una vuelta a ×3 con un bot. rev alto: loadConfig no borra timeScale si sube REV. */
+const ONE_LAP = `try { localStorage.clear(); localStorage.setItem('f1c.help', '1'); localStorage.setItem('f1c.config.v1', JSON.stringify({ rev: 99, timeScale: 3, laps: 1, bots: 1 })); } catch {}`;
+const REPLAY_MEASURE = `(() => {
+  const d = document.getElementById('dlg-tel'), fail = [];
+  const r = d.querySelector('.rp-range');
+  if (!r) return { fail: ['la telemetría no trae la repetición'], info: {} };
+  const touch = matchMedia('(pointer: coarse)').matches;
+  if (touch && r.getBoundingClientRect().height < ${TOUCH_MIN} - 0.5) fail.push('.rp-range mide ' + Math.round(r.getBoundingClientRect().height) + ' px de alto');
+  if (Number(r.value) === 0) fail.push('Ver en la repetición no llevó la barra a la pérdida');
+  if ([...d.querySelectorAll('.rp-read dd')].some((dd) => dd.textContent.trim() === '—')) fail.push('la lectura de la repetición tiene celdas sin llenar');
+  if (!d.querySelector('.rp-car')) fail.push('falta el auto en el mapa de la repetición');
+  return { fail, info: { punto: r.value } };
+})()`;
+
+/** Carrera corta hasta los resultados y de ahí a la repetición. */
+async function replay(c, base, sc) {
+  const t = await open(c, base, sc, ONE_LAP), report = [];
+  const shot = async (name) => writeFileSync(join(OUT, `${sc.name}-${name}.png`), await t.shot());
+  await t.evaluate(`document.getElementById('go').click()`);
+  if (!(await t.until(`document.getElementById('dlg-result').open`, 120000))) {
+    await t.close();
+    return [{ what: 'repetición', fail: ['la vuelta no terminó en 120 s'], info: {} }];
+  }
+  await sleep(400);
+  report.push({ what: 'resultados de una vuelta', ...(await t.evaluate(DIALOG_MEASURE('dlg-result'))) });
+  await shot('resultados-vuelta');
+  await t.evaluate(`document.querySelector('#dlg-result [data-a="tel"]').click()`);
+  await t.until(`document.getElementById('dlg-tel').open && !!document.querySelector('#dlg-tel .rp-range')`, 5000);
+  await sleep(500);
+  const m = await t.evaluate(DIALOG_MEASURE('dlg-tel')), q = await t.evaluate(REPLAY_MEASURE), fail = [...m.fail, ...q.fail];
+  const v0 = Number(await t.evaluate(`document.querySelector('#dlg-tel .rp-range').value`));
+  await t.evaluate(`document.querySelector('#dlg-tel [data-rp="play"]').click()`);
+  await sleep(1200);
+  if (Number(await t.evaluate(`document.querySelector('#dlg-tel .rp-range').value`)) === v0) fail.push('al reproducir, la barra no avanzó');
+  await shot('repeticion');
+  report.push({ what: 'repetición', fail, info: { ...m.info, ...q.info } });
   await t.close();
   return report;
 }
@@ -229,11 +292,14 @@ async function offline(c, base) {
     if (!(await t.until(READY))) fail.push('sin red, la página no arrancó');
     await t.evaluate(`document.getElementById('dlg-result').close(); document.getElementById('btn-settings').click()`);
     if (!(await t.until(`document.getElementById('dlg-settings').open`, 5000))) fail.push('sin red, ajustes no abrió');
+    await t.evaluate(`document.getElementById('dlg-settings').close(); document.getElementById('btn-mode').click()`);
+    if (!(await t.until(`document.getElementById('dlg-mode').open`, 5000))) fail.push('sin red, Modo no abrió');
   }
   await t.close();
   return { what: 'sin conexión', fail, info: {} };
 }
 
+const REPLAY = new Set(['telefono-360', 'telefono-apaisado']);
 const print = (r) => {
   const extra = Object.keys(r.info).length ? ` ${JSON.stringify(r.info)}` : '';
   console.log(`  ${r.fail.length ? '✗' : '✓'} ${r.what}${extra}`);
@@ -248,13 +314,16 @@ async function main() {
   const base = `http://127.0.0.1:${server.address().port}/`;
   let bad = 0;
   try {
-    for (const sc of SCREENS) {
+    for (const sc of SCREENS.filter((x) => !only || x.name === only)) {
       console.log(`\n${sc.name} (${sc.w}×${sc.h}${sc.touch ? ', táctil' : ''})`);
       for (const r of await screen(c, base, sc)) bad += print(r);
       for (const r of await welcome(c, base, sc)) bad += print(r);
+      if (REPLAY.has(sc.name)) for (const r of await replay(c, base, sc)) bad += print(r);
     }
-    console.log('\nversión instalable');
-    bad += print(await offline(c, base));
+    if (!only) {
+      console.log('\nversión instalable');
+      bad += print(await offline(c, base));
+    }
   } finally {
     c.close();
     server.close();

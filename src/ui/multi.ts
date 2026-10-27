@@ -10,8 +10,9 @@ export interface MultiState {
   code: string;
   /** Estado de la conexión o el último error, en una línea. */
   status: string;
+  /** El circuito con su categoría: «Gálvez, Buenos Aires (3 vueltas · normal)». */
   circuit: string;
-  /** Link de tu mejor vuelta en este circuito, o null si todavía no hay. */
+  /** Link de tu récord en esta categoría, o null si todavía no hay. */
   share: string | null;
   rival: { name: string; t: number } | null;
 }
@@ -42,7 +43,7 @@ function body(st: MultiState): string {
       <p>Sala <b class="mono">${esc(r.code)}</b>. Pasale este link a quien quieras sumar:</p>
       ${linkField('room', r.link, 'Link de la sala')}
       <ul class="members">${r.members.map((m) => `<li>${esc(m.name)}${m.me ? ' (vos)' : ''}${m.host ? ' · anfitrión' : ''}</li>`).join('')}</ul>
-      <p class="hint">${r.isHost ? 'Vos elegís el circuito y das la largada. Vueltas, fallas y velocidad del tiempo salen de tus ajustes.' : 'El anfitrión elige el circuito, las vueltas y da la largada.'} En la sala no hay bots ni pausa.</p>
+      <p class="hint">${r.isHost ? 'Vos elegís el circuito y das la largada. Vueltas, fallas y velocidad del tiempo salen de tus ajustes.' : 'El anfitrión elige el circuito, las vueltas y da la largada.'} En la sala no hay bots, pausa ni modos: se corre una carrera.</p>
       <div class="field"><span class="hint">${esc(st.status)}</span><button type="button" data-leave>Salir de la sala</button></div>`
     : `
       <label class="field">Tu nombre<input type="text" name="name" maxlength="${NAME_MAX}" placeholder="Cómo te ven los demás" value="${esc(st.name)}"></label>
@@ -50,8 +51,8 @@ function body(st: MultiState): string {
       <div class="field"><input type="text" name="code" placeholder="Código o link de una sala" aria-label="Código de sala" value="${esc(st.code)}"><button type="button" data-join ${st.joining ? 'disabled' : ''}>Entrar</button></div>
       <p class="hint">${st.status ? esc(st.status) : 'Los navegadores se conectan directo entre sí. En algunas redes de empresa o de celular no llegan a conectarse.'}</p>`;
   const ghost = `
-      <p>Mandale tu mejor vuelta en ${esc(st.circuit)} a alguien para que corra contra ella, o cargá la de otro.</p>
-      ${st.share ? linkField('ghost', st.share, 'Link de tu mejor vuelta') : '<p class="hint">Todavía no tenés una vuelta cerrada en este circuito.</p>'}
+      <p>Mandale tu récord en ${esc(st.circuit)} a alguien para que corra contra él, o cargá el de otro.</p>
+      ${st.share ? linkField('ghost', st.share, 'Link de tu récord') : '<p class="hint">Todavía no tenés un récord en esta categoría.</p>'}
       <div class="field"><input type="text" name="ghost" placeholder="Pegá el link o el código de un fantasma" aria-label="Fantasma de otro jugador"><button type="button" data-ghost>Cargar</button></div>
       <p class="hint" data-ghost-msg></p>
       ${st.rival ? `<div class="field"><span>Fantasma cargado: ${esc(st.rival.name)} · ${fmt(st.rival.t)}</span><button type="button" data-clear>Quitar</button></div>` : ''}`;

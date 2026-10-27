@@ -1,7 +1,7 @@
 import { PHYS, START, STEER, aAcc, TEMP_TARGET, POWER, ERS_BOOST, batteryRate, TYRE, FUEL, FAULT } from './physics';
 import { score, efficiency, idealBal } from './score';
-import { TEL_DS, emptyLap } from './telemetry';
-import type { Car, Controls, Difficulty, Rec, Seg, Track, Vec2 } from './types';
+import { CTL_KEYS, SM_DS, TEL_DS, ctlOf, emptyLap, pushEv, smCount } from './telemetry';
+import type { Car, Controls, Difficulty, Rec, Seg, Sm, Track, Vec2 } from './types';
 
 /** Generador sembrado (mulberry32): devuelve el número y el estado siguiente. */
 export function rand(state: number): [number, number] {
@@ -22,7 +22,7 @@ export function newCar(tr: Track, gridGap: number, lat: number, laps = 3, seed =
   const s = tr.len - gridGap;
   return {
     s, lat, v: 0, laps: -1, lapT0: 0, last: null, best: null, done: false, fin: null, bat: START.BAT, temp: START.TEMP, eff: START.EFF, sc: 1, off: 0, ty: 's', trail: [], tq: s,
-    tyre: 100, fuel: fuelLoad(tr, laps, d), fuel0: fuelLoad(tr, laps, d), fuse: [false, false, false], fuseT: [0, 0, 0], rstSeen: [0, 0, 0], rng: seed, tel: emptyLap(tr.len), hist: [],
+    tyre: 100, fuel: fuelLoad(tr, laps, d), fuel0: fuelLoad(tr, laps, d), fuse: [false, false, false], fuseT: [0, 0, 0], rstSeen: [0, 0, 0], rng: seed, seen: null, tmax: START.TEMP, tel: emptyLap(tr.len), hist: [],
   };
 }
 
@@ -67,6 +67,25 @@ export function posAt(tr: Track, s: number, o = 0): Vec2 {
 export const carPos = (tr: Track, c: Car): Vec2 => posAt(tr, c.s, c.off + c.lat);
 
 export interface StepCtx { green: boolean; t: number; laps: number; trail: boolean; faults: boolean }
+
+/** Registros de 10 m entre una muestra y la siguiente. */
+const SM_K = SM_DS / TEL_DS;
+
+/** Estado del auto redondeado en el origen, así el fantasma lleva las muestras exactas. */
+const sampleOf = (c: Car): Sm => ({ bat: Math.round(c.bat), temp: Math.round(c.temp), tyre: Math.round(c.tyre), fuel: Math.round(c.fuel * 10) / 10 });
+
+/**
+ * Deja en la traza cada cambio de la consola respecto del paso anterior. Va antes de `rearm`, que pisa rstSeen.
+ * Con el auto en la grilla (vuelta < 0) solo recuerda la consola: la largada no es parte de la vuelta.
+ * Dos toques del mismo control en un paso cuentan como uno.
+ */
+function logEvents(c: Car, ctl: Controls, t: number): void {
+  const now = ctlOf(ctl), was = c.seen, at = { s: c.s, t: t - c.lapT0 };
+  c.seen = now;
+  if (!was || c.laps < 0) return;
+  for (const k of CTL_KEYS) if (now[k] !== was[k]) pushEv(c.tel, { ...at, k, v: now[k] });
+  FUSED.forEach((_, f) => { if (ctl.rst[f] !== c.rstSeen[f]) pushEv(c.tel, { ...at, k: 'rst', v: f }); });
+}
 
 /** Cada cambio en un botón de fusible es un intento de rearme: vale si su control está en el centro. */
 function rearm(c: Car, ctl: Controls): void {
@@ -113,10 +132,18 @@ function wearTyres(c: Car, lev: number, ty: Seg, sc: number, dt: number): void {
   c.tyre = Math.max(0, c.tyre - TYRE.WEAR * push * bad * dt);
 }
 
+/** Completa las muestras que un paso salteó (el último registro puede medir menos que un paso). */
+function fillSamples(c: Car): void {
+  const sm = c.tel.sm;
+  if (!sm) return;
+  for (let i = 0, m = smCount(c.tel.tt.length); i < m; i++) sm[i] ??= sampleOf(c);
+}
+
 function closeLap(c: Car, lt: number): void {
   c.last = lt;
   if (c.best === null || lt < c.best) c.best = lt;
   c.tel.t = lt;
+  fillSamples(c);
   c.hist.push(c.tel);
 }
 
@@ -125,6 +152,7 @@ function crossLine(c: Car, tr: Track, x: StepCtx): void {
   c.laps++;
   if (c.laps >= 1 && !c.done) closeLap(c, x.t - c.lapT0);
   c.tel = emptyLap(tr.len);
+  c.tel.c0 = c.seen ?? undefined;
   c.lapT0 = x.t;
   if (c.laps >= x.laps && !c.done) { c.done = true; c.fin = x.t; }
 }
@@ -140,12 +168,14 @@ function record(c: Car, ctl: Controls, t: number): void {
     c.tel.tt[tk] = t - c.lapT0;
     c.tel.v[tk] = c.v;
     if (c.tel.rec) c.tel.rec[tk] = blackBox(c, ctl);
+    if (c.tel.sm && tk % SM_K === 0) c.tel.sm[tk / SM_K] = sampleOf(c);
   }
 }
 
 /** Como la batería, el motor no cambia en la grilla: la largada no depende de cuánto se esperó. */
 function heatAndCharge(c: Car, lev: number, ers: number, ty: Seg, dt: number): void {
   c.temp += (TEMP_TARGET[lev] - c.temp) * PHYS.TEMP_RATE * dt;
+  if (!c.done) c.tmax = Math.max(c.tmax, c.temp);
   if (!c.fuse[0]) c.bat = Math.max(0, Math.min(100, c.bat + batteryRate(ers, ty) * dt));
 }
 
@@ -165,6 +195,7 @@ function dropTrail(c: Car, tr: Track, sc: number): void {
 }
 
 export function stepCar(c: Car, ctl: Controls, tr: Track, dt: number, x: StepCtx): void {
+  logEvents(c, ctl, x.t);
   rearm(c, ctl);
   const run = x.green && !c.done;
   if (run && x.faults) rollFault(c, x.t, dt);

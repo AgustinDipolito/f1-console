@@ -21,6 +21,10 @@
     <button id="go">Largar</button>
     <button id="pause">Pausa</button>
     <span class="grow"></span>
+    <button id="btn-mode" class="act">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 17.5V2.5"/><path d="M4.5 3.2h11l-2.6 3.8 2.6 3.8h-11"/></svg>
+      <span>Modo</span>
+    </button>
     <button id="btn-multi" class="act">
       <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="7" cy="6.5" r="2.8"/><path d="M1.8 17c0-3 2.3-5.2 5.2-5.2s5.2 2.2 5.2 5.2"/><circle cx="14.2" cy="5.8" r="2.3"/><path d="M14.4 10.6c2.3.1 4 1.9 4 4.4"/></svg>
       <span class="long">Jugar con otros</span><span class="short">Con otros</span>
@@ -51,6 +55,7 @@
       <div class="panel-head"><span>Fig 2 · Consola</span><span id="readout" class="mono"><span id="eff"></span><span id="eff-seg"></span></span></div>
       <div id="console" class="canvas-box">
         <div id="labels" class="labels"></div>
+        <div id="macros" class="macros" hidden></div>
       </div>
       <div id="log" class="log"><div></div><div></div><div></div></div>
       <div class="hint"><span class="for-mouse">Clic en los controles · rotativos: tocá la marca de la posición · espacio pausa · ayuda tiene las teclas</span><span class="for-touch">Tocá los controles · en los rotativos, la marca de la posición que querés · arrastrá para inclinar la vista</span></div>
@@ -59,6 +64,7 @@
   <dialog id="dlg-settings"></dialog>
   <dialog id="dlg-help"></dialog>
   <dialog id="dlg-tel" class="wide"></dialog>
+  <dialog id="dlg-mode"></dialog>
   <dialog id="dlg-multi"></dialog>
   <dialog id="dlg-result" class="wide"></dialog>
   <dialog id="dlg-welcome" class="welcome"></dialog>

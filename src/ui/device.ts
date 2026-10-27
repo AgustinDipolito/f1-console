@@ -3,8 +3,8 @@
 /** Vibración disponible (Android; el iPhone no la ofrece a la web). */
 export const canVibrate = (): boolean => typeof navigator.vibrate === 'function';
 
-/** Toque corto al accionar un control y un aviso más largo cuando salta un fusible. */
-export const BUZZ = { tap: 8, alarm: [60, 50, 60] };
+/** Toque corto al accionar un control, un aviso más largo cuando salta un fusible y dos toques suaves en una advertencia. */
+export const BUZZ = { tap: 8, alarm: [60, 50, 60], warn: [30, 80, 30] };
 export function buzz(on: boolean, pattern: number | number[]): void {
   // Sin un toque previo el navegador la rechaza y lo avisa en la consola: no hace falta pedirla.
   if (on && canVibrate() && navigator.userActivation?.hasBeenActive !== false) navigator.vibrate(pattern);

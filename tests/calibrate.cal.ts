@@ -2,17 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { buildTrack, coordsOf, geoToMeters } from '../src/tracks/build';
 import { Race } from '../src/sim/race';
 import { botControls, type BotLevel } from '../src/bot/bot';
+import { PLAYERS } from './models';
 import type { Difficulty, Track } from '../src/sim/types';
 
-/**
- * Calibración contra jugadores modelo en todos los trazados reales.
- * ideal: lee el tramo sin retraso y maneja nafta y temperatura justo.
- * humano: un segundo de reacción (unos 60 m), frenos aproximados y 6 s para rearmar un fusible.
- */
-const PLAYERS: Record<'ideal' | 'humano', BotLevel> = {
-  ideal: { delay: 0, jitter: 0, balErr: 0, tempCap: 99.9, fix: 0.5, fuelMix: 1.08 },
-  humano: { delay: 60, jitter: 20, balErr: 2.5, tempCap: 97, fix: 6, fuelMix: 1.12 },
-};
+/** Calibración contra jugadores modelo (en tests/models.ts) en todos los trazados reales. */
 const LAPS = 3;
 
 const files = import.meta.glob<string>('../public/tracks/*.geojson', { eager: true, query: '?raw', import: 'default' });

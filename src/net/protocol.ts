@@ -1,5 +1,6 @@
 import type { Snap } from '../sim/remote';
-import type { Lap } from '../sim/types';
+import { EV_KEYS, EV_VMAX, TEL_DS, smCount, timeAt, type Category } from '../sim/telemetry';
+import type { Ctl, Difficulty, Ev, Lap, Sm } from '../sim/types';
 
 /** Lo que llega por la red viene de otro navegador: se valida todo antes de usarlo. Corre en Node para los tests. */
 
@@ -10,7 +11,8 @@ export const cleanName = (s: string): string =>
 
 // ——— Fantasma compartido ———
 
-export interface SharedGhost { track: string; name: string; lap: Lap }
+/** cat: la categoría de la vuelta; null en un código v1, que no la lleva. */
+export interface SharedGhost { track: string; name: string; lap: Lap; cat: Category | null }
 
 const GHOST_VER = 1;
 /** Valor que marca un registro vacío (NaN) en el código. */
@@ -66,11 +68,130 @@ function bytesLap(b: Uint8Array): Lap | null {
   return t > 0 ? { t, tt, v } : null;
 }
 
+// ——— v2: la vuelta con su categoría, la consola al cruzar la línea, los eventos y las muestras. Ancho fijo, big endian ———
+
+const GHOST_V2 = 2;
+const HEAD2 = 14;
+/** Unidades del tiempo (s) y la velocidad (m/s) en el código. */
+const TT_Q = 0.005, V_Q = 0.5;
+/** Valor que marca un registro vacío (NaN). */
+const HOLE8 = 255;
+/** Registros que acepta un código (100 km): lo que pase es basura. */
+const N_MAX = 10000;
+const DIFFS: readonly Difficulty[] = ['easy', 'normal', 'hard'];
+
+const q = (x: number, hi: number): number => Math.max(0, Math.min(hi, Math.round(x)));
+/** Con traza completa una vuelta sale como v2; si no (una legacy, un v1), como v1. */
+export const hasTrace = (l: Lap): boolean => !!l.c0 && l.sm?.length === smCount(l.tt.length);
+
+function putTT(dv: DataView, o: number, tt: number[]): void {
+  let prev = 0;
+  tt.forEach((t, k) => {
+    const u = Math.round(t / TT_Q), ok = Number.isFinite(u) && u >= prev, d = ok ? Math.min(254, u - prev) : HOLE8;
+    // ponytail: un registro de más de 1,27 s se recorta a 254 unidades; el acumulado lo recupera en los siguientes y t total va aparte, exacto.
+    dv.setUint8(o + k, d);
+    if (ok) prev += d;
+  });
+}
+
+function putV(dv: DataView, o: number, v: number[]): void {
+  v.forEach((x, k) => { const u = Math.round(x / V_Q); dv.setUint8(o + k, Number.isFinite(u) && u >= 0 && u < HOLE8 ? u : HOLE8); });
+}
+
+function putEv(dv: DataView, o: number, ev: Ev[]): void {
+  ev.forEach((e, i) => { dv.setUint16(o + 4 * i, q(e.s, 0xffff)); dv.setUint8(o + 4 * i + 2, EV_KEYS.indexOf(e.k)); dv.setUint8(o + 4 * i + 3, q(e.v, 255)); });
+}
+
+function putSm(dv: DataView, o: number, sm: Sm[]): void {
+  sm.forEach((x, i) => {
+    const p = o + 5 * i;
+    dv.setUint8(p, q(x.bat, 255)); dv.setUint8(p + 1, q(x.temp, 255)); dv.setUint8(p + 2, q(x.tyre, 255)); dv.setUint16(p + 3, q(x.fuel * 10, 0xffff));
+  });
+}
+
+function lapBytes2(l: Lap, c: Category): Uint8Array {
+  const n = l.tt.length, ev = l.ev ?? [], sm = l.sm ?? [], c0 = l.c0 as Ctl, o = HEAD2 + 2 * n;
+  const dv = new DataView(new ArrayBuffer(o + 4 * ev.length + 5 * sm.length));
+  dv.setUint8(0, GHOST_V2); dv.setUint8(1, c.ver); dv.setUint8(2, c.laps); dv.setUint8(3, DIFFS.indexOf(c.difficulty));
+  dv.setUint16(4, n); dv.setUint32(6, Math.round(l.t * 1000));
+  dv.setUint8(10, c0.lev | (c0.ers << 2) | (c0.dif << 4) | (c0.eb << 6));
+  dv.setUint8(11, q(c0.bal, 100) | (c0.lim << 7));
+  dv.setUint16(12, ev.length);
+  putTT(dv, HEAD2, l.tt); putV(dv, HEAD2 + n, l.v); putEv(dv, o, ev); putSm(dv, o + 4 * ev.length, sm);
+  return new Uint8Array(dv.buffer);
+}
+
+interface Head2 { ver: number; laps: number; d: number; n: number; t: number; c0: Ctl; nEv: number }
+
+function head2(dv: DataView): Head2 {
+  const a = dv.getUint8(10), b = dv.getUint8(11);
+  return {
+    ver: dv.getUint8(1), laps: dv.getUint8(2), d: dv.getUint8(3), n: dv.getUint16(4), t: dv.getUint32(6) / 1000, nEv: dv.getUint16(12),
+    c0: { lev: a & 3, ers: (a >> 2) & 3, dif: (a >> 4) & 3, eb: (a >> 6) & 3, bal: b & 127, lim: b >> 7 },
+  };
+}
+
+/** La consola de la largada: cada control en su rango. */
+const okCtl = (c: Ctl): boolean => c.lev <= 2 && c.ers <= 2 && c.dif <= 2 && c.eb <= 2 && c.bal <= EV_VMAX.bal;
+
+/** Cabecera sana y largo exacto: de acá en más ninguna lectura se sale del buffer. */
+const okHead = (h: Head2, len: number): boolean =>
+  h.laps >= 1 && h.d < DIFFS.length && h.n >= 1 && h.n <= N_MAX && h.t > 0 && h.nEv <= h.n && okCtl(h.c0)
+  && len === HEAD2 + 2 * h.n + 4 * h.nEv + 5 * smCount(h.n);
+
+function readTT(dv: DataView, o: number, n: number): number[] {
+  let prev = 0;
+  return Array.from({ length: n }, (_, k) => { const d = dv.getUint8(o + k); if (d === HOLE8) return NaN; prev += d; return prev * TT_Q; });
+}
+
+function readV(dv: DataView, o: number, n: number): number[] {
+  return Array.from({ length: n }, (_, k) => { const x = dv.getUint8(o + k); return x === HOLE8 ? NaN : x * V_Q; });
+}
+
+/** El tiempo de un evento no viaja: sale de los registros (±20 ms) o, con un hueco, de repartir el total. */
+function evTime(l: Lap, s: number): number {
+  const t = timeAt(l, s);
+  return Number.isFinite(t) ? t : (l.t * s) / (l.tt.length * TEL_DS);
+}
+
+function readEv(dv: DataView, o: number, h: Head2, l: Lap): Ev[] | null {
+  const out: Ev[] = [];
+  let last = 0;
+  for (let i = 0; i < h.nEv; i++) {
+    const p = o + 4 * i, s = dv.getUint16(p), k = EV_KEYS[dv.getUint8(p + 2)], v = dv.getUint8(p + 3);
+    if (k === undefined || s < last || s > h.n * TEL_DS || v > EV_VMAX[k]) return null;
+    last = s;
+    out.push({ s, t: evTime(l, s), k, v });
+  }
+  return out;
+}
+
+function readSm(dv: DataView, o: number, m: number): Sm[] | null {
+  const out: Sm[] = [];
+  for (let i = 0; i < m; i++) {
+    const p = o + 5 * i, bat = dv.getUint8(p), tyre = dv.getUint8(p + 2);
+    if (bat > 100 || tyre > 100) return null;
+    out.push({ bat, temp: dv.getUint8(p + 1), tyre, fuel: dv.getUint16(p + 3) / 10 });
+  }
+  return out;
+}
+
+/** La vuelta v2 y su categoría sin circuito (el circuito viaja aparte, en el código). */
+function bytesLap2(b: Uint8Array): { lap: Lap; cat: Omit<Category, 'track'> } | null {
+  if (b.length < HEAD2) return null;
+  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength), h = head2(dv);
+  if (!okHead(h, b.length)) return null;
+  const o = HEAD2 + 2 * h.n, lap: Lap = { t: h.t, tt: readTT(dv, HEAD2, h.n), v: readV(dv, HEAD2 + h.n, h.n), c0: h.c0 };
+  const ev = readEv(dv, o, h, lap), sm = readSm(dv, o + 4 * h.nEv, smCount(h.n));
+  if (!ev || !sm) return null;
+  return { lap: { ...lap, ev, sm }, cat: { ver: h.ver, laps: h.laps, difficulty: DIFFS[h.d] } };
+}
+
 const TRACK_ID = /^[\w-]{1,40}$/;
 
 /** Código de fantasma: circuito~nombre~vuelta. Va en el link después de #fantasma=. */
 export const encodeGhost = (g: SharedGhost): string =>
-  `${g.track}~${encodeURIComponent(cleanName(g.name))}~${toB64url(lapBytes(g.lap))}`;
+  `${g.track}~${encodeURIComponent(cleanName(g.name))}~${toB64url(g.cat && hasTrace(g.lap) ? lapBytes2(g.lap, g.cat) : lapBytes(g.lap))}`;
 
 /** El código pelado: sin el link alrededor y con los ~ sin codificar (algunas apps los mandan codificados). */
 function ghostCode(input: string): string {
@@ -97,8 +218,14 @@ export function decodeGhost(input: string): SharedGhost | null {
   if (!parts) return null;
   const [track, name, data] = parts, nm = nameOf(name);
   if (nm === null) return null;
-  const b = fromB64url(data), lap = b && bytesLap(b);
-  return lap ? { track, name: nm, lap } : null;
+  const b = fromB64url(data);
+  if (!b) return null;
+  if (b[0] === GHOST_V2) {
+    const g = bytesLap2(b);
+    return g ? { track, name: nm, lap: g.lap, cat: { track, ...g.cat } } : null;
+  }
+  const lap = bytesLap(b);
+  return lap ? { track, name: nm, lap, cat: null } : null;
 }
 
 // ——— Sala ———

@@ -85,3 +85,6 @@ export const STEER = {
   /** Tope de giro del volante a cada lado (rad). */
   LOCK: Math.PI / 2,
 } as const;
+
+/** Versión de las reglas. Subirla con cualquier cambio de números o fórmulas que mueva un tiempo de vuelta: entra en la categoría del récord y en el fantasma v2. */
+export const SIM_VER = 1;

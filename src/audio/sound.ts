@@ -4,7 +4,7 @@ const F_LOW = 190;
 const F_HIGH = 520;
 
 /**
- * Sonido con WebAudio: motor, clic de cada control, pitidos de largada y alarma.
+ * Sonido con WebAudio: motor, clic de cada control, pitidos de largada, alarma y las señales de respuesta (advertencia, acierto, vuelta y meta).
  * El navegador no deja arrancar audio sin un gesto, así que espera al primer clic o tecla.
  */
 export class Sound {
@@ -84,4 +84,12 @@ export class Sound {
   click(): void { this.blip(1800, 0.025, 0.12); }
   beep(high: boolean): void { this.blip(high ? 880 : 440, high ? 0.5 : 0.18, 0.18, 'sine'); }
   alarm(): void { [0, 0.18, 0.36].forEach((at, i) => this.blip(i % 2 ? 620 : 860, 0.14, 0.16, 'triangle', at)); }
+  /** Advertencia: dos toques graves iguales. */
+  warn(): void { [0, 0.16].forEach((at) => this.blip(520, 0.12, 0.14, 'triangle', at)); }
+  /** Tramo acertado: corto y bajito. */
+  good(): void { this.blip(1320, 0.06, 0.08, 'sine'); }
+  /** Vuelta cerrada: dos tonos que suben. */
+  lap(): void { [660, 880].forEach((f, i) => this.blip(f, 0.12, 0.14, 'sine', i * 0.14)); }
+  /** Meta: tres tonos que suben, el último largo. */
+  finish(): void { [[660, 0], [880, 0.15], [1100, 0.3]].forEach(([f, at], i) => this.blip(f, i === 2 ? 0.4 : 0.12, 0.16, 'sine', at)); }
 }

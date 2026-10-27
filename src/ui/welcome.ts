@@ -101,7 +101,7 @@ export function openWelcome(dlg: HTMLDialogElement, start: Config, { theme, show
     ...(draft.assist ? ['En modo fácil, la etiqueta azul de cada control dice a qué posición moverlo.'] : []),
     'Todo esto se cambia en Ajustes, y Ayuda explica cada parte del volante.',
     touch ? 'En los rotativos, tocá la marca de la posición que querés. Arrastrá para inclinar la vista.'
-      : 'Teclas: Q, W, E y R mueven los rotativos; A y D, los frenos; espacio pausa.',
+      : 'Teclas: Q, W, E y R mueven los rotativos; A y D, los frenos; Z y X, Ataque y Ahorro; espacio pausa.',
   ];
   const ready = (): string => `
     <h2 id="wl-title">${canGo() ? 'Listo para largar' : 'Listo'}${draft.name ? `, ${esc(draft.name)}` : ''}</h2>

@@ -1,7 +1,10 @@
 import { BAL, WANTS, type Knob } from '../sim/score';
 import { PHYS } from '../sim/physics';
 import type { Seg } from '../sim/types';
-import { ALERT_COLORS, DELTA_COLORS, LED_COLOR, LED_GROUPS } from '../console/panel';
+import { ALERT_COLORS, DELTA_COLORS, LED_COLOR, LED_GROUPS, MACROS } from '../console/panel';
+import { BOT_PROFILES } from '../bot/bot';
+import { CHALLENGES } from '../sim/scenario';
+import { MODE_INFO } from './modes-data';
 import { BRAKING_FILL, Q_COLORS } from '../trackview/trackview';
 import { KNOB_LABEL as LABEL, KNOB_NAMES, SEG_NAMES, cap } from './format';
 
@@ -51,7 +54,7 @@ function wheelSvg(): string {
     <rect x="-34" y="7" width="68" height="18" rx="4" class="part"/>
     ${[-22, 0, 22].map((x) => `<circle cx="${x}" cy="16" r="6" class="part"/>`).join('')}
     ${[-66, -22, 22, 66].map(knob).join('')}
-    ${badge(1, -66, -64)}${badge(2, 34, -26)}${badge(3, 78, -28)}${badge(4, -100, -23)}${badge(5, 100, -64)}${badge(6, 46, 16)}${badge(7, -92, 46)}
+    ${badge(1, -66, -64)}${badge(2, 34, -26)}${badge(3, 78, -28)}${badge(4, -100, -23)}${badge(5, 100, -64)}${badge(6, 46, 16)}${badge(7, -92, 46)}${badge(8, 125, -66)}
   </svg>`;
 }
 
@@ -65,6 +68,7 @@ const volante = (): string => {
     ['Limitador', 'Primero la tapa, después la llave.'],
     ['Fusibles', 'ERS, diferencial y freno motor.'],
     ['Rotativos', `${cap(rot)}. Tocá la marca de la posición que querés.`],
+    ['Ataque y Ahorro', `${MACROS.map((m) => `${m.name}: potencia en ${KNOB_NAMES.lev[m.set.lev as number]} y ERS en ${KNOB_NAMES.ers[m.set.ers as number]}`).join('; ')}. Están arriba a la derecha de la consola y con teclado son ${MACROS.map((m) => m.key.toUpperCase()).join(' y ')}. Solo cambian esos dos controles: después los movés como siempre.`],
   ];
   return `<div class="wheel"><div>${wheelSvg()}
     <p class="hint">En difícil el volante gira con el auto en cada curva y los botones se mueven bajo el puntero. Con el modo fácil, en ajustes, la consola marca en azul qué mover y a qué posición.</p></div>
@@ -99,19 +103,33 @@ const mapa = (): string => `
   <ul class="rows">
     <li><span class="sw3">${Q_COLORS.map((c) => `<i style="background:${c}"></i>`).join('')}</span><div><b>Tu estela</b> Verde bien configurado, ámbar regular, rojo mal. Si una curva te agarra mal configurado, el auto se abre.</div></li>
     <li><span class="swb" style="background:${BRAKING_FILL}"></span><div><b>Frenadas</b> Las zonas donde hay que frenar.</div></li>
-    <li><span class="swg"></span><div><b>Fantasma</b> Tu mejor vuelta en ese circuito, o la de otro jugador si cargaste una.</div></li>
+    <li><span class="swg"></span><div><b>Fantasma</b> Tu récord en esa categoría (circuito, vueltas y dificultad), o la vuelta de otro jugador si cargaste una. En persecución, el que perseguís.</div></li>
     <li><span class="swn">1</span><div><b>Pérdidas</b> Dónde perdiste tiempo en la última vuelta, numeradas como en la telemetría.</div></li>
   </ul>
   <h3>Telemetría</h3>
   <p>Cada vuelta se compara con la ideal y lo perdido se reparte por causa: un control que llegó tarde al tramo, uno que cambiaste antes de tiempo, uno distinto de lo que pide el tramo, el motor caliente, las gomas o la largada.</p>
+  <p>La repetición recorre la vuelta: movés la barra o tocás reproducir y ves la consola y el auto en cada punto. Abajo quedan marcadas las pérdidas, los cambios de control, los fusibles y el motor caliente. Contra el fantasma compara tramo por tramo qué hizo cada uno.</p>
   <h3>Jugar con otros</h3>
   <p>Armá una sala privada y pasá el link: cada uno corre su auto y ve a los demás en el mapa. El anfitrión elige el circuito y da la largada. También podés mandar tu mejor vuelta como link para que alguien corra contra tu fantasma.</p>`;
+
+// ——— Modos ———
+
+const modos = (): string => `
+  <p>Se elige en Modo, arriba. Al cambiar, la carrera vuelve a la grilla. En una sala se corre siempre una carrera.</p>
+  <ul class="rows">${Object.values(MODE_INFO).map((m) => `<li><div><b>${m.name}</b> ${m.say}</div></li>`).join('')}</ul>
+  <h3>Desafíos</h3>
+  <ul class="rows">${CHALLENGES.map((s) => `<li><div><b>${s.title}</b> ${s.context} ${s.goal}</div></li>`).join('')}</ul>
+  <p class="hint">Cada desafío arranca siempre igual, con la misma semilla.</p>
+  <h3>Rivales</h3>
+  <p>Cada bot tiene nombre y un estilo propio. El estilo cambia dónde gana o pierde tiempo. El nivel lo pone la dificultad.</p>
+  <ul class="rows">${BOT_PROFILES.map((b) => `<li><div><b>${b.name}</b> ${b.trait}</div></li>`).join('')}</ul>`;
 
 // ——— Teclas ———
 
 const KEYS: [string[], string][] = [
   [['Q'], LABEL.ers], [['W'], cap(LABEL.lev)], [['E'], cap(LABEL.dif)], [['R'], cap(LABEL.eb)],
   [['A', 'D'], 'Frenos: atrás y adelante'], [['P'], 'Limitador'], [['1', '2', '3'], 'Fusibles'],
+  ...MACROS.map((m): [string[], string] => [[m.key.toUpperCase()], `Macro ${m.name}`]),
   [['←', '→'], 'Inclinar apenas la vista'], [['Espacio'], 'Pausa'],
 ];
 const teclas = (): string => `
@@ -119,7 +137,7 @@ const teclas = (): string => `
   <p class="hint">Con el teclado, cada rotativo pasa a la posición siguiente.</p>`;
 
 const TABS: [string, string, () => string][] = [
-  ['tramos', 'Tramos', tramos], ['volante', 'Volante', volante], ['alertas', 'Alertas', alertas], ['mapa', 'Mapa', mapa], ['teclas', 'Teclas', teclas],
+  ['tramos', 'Tramos', tramos], ['volante', 'Volante', volante], ['alertas', 'Alertas', alertas], ['mapa', 'Mapa', mapa], ['modos', 'Modos', modos], ['teclas', 'Teclas', teclas],
 ];
 
 export function openHelp(dlg: HTMLDialogElement): void {

@@ -1,4 +1,5 @@
-import type { Diagnosis, Loss } from '../sim/diagnose';
+import { lapDiagnosis, type Diagnosis, type Loss } from '../sim/diagnose';
+import type { Lap, Track } from '../sim/types';
 import { KNOB_LABEL, KNOB_NAMES, SEG_NAMES, f1 } from './format';
 
 /** Pérdidas de una vuelta en texto y marcas. Sin el gráfico: lo usa main en cada vuelta sin cargar el diálogo de telemetría. */
@@ -29,3 +30,15 @@ export function lossText(l: Loss): string {
 /** Las pérdidas con lugar (un control en juego), de la más cara a la más barata. */
 export const located = (d: Diagnosis): Loss[] => d.losses.filter((l) => l.knob && l.sec >= SHOW_MIN);
 
+/**
+ * La pérdida con lugar más cara de toda la carrera y la vuelta (índice en `laps`) donde pasó. null sin caja negra
+ * (las vueltas de otra sesión no la traen) o sin una pérdida con lugar.
+ */
+export function worstLoss(tr: Track, laps: Lap[]): { lap: number; loss: Loss } | null {
+  let out: { lap: number; loss: Loss } | null = null;
+  for (let lap = 0; lap < laps.length; lap++) {
+    const d = lapDiagnosis(tr, laps[lap], lap === 0), loss = d ? located(d)[0] : undefined;
+    if (loss && (!out || loss.sec > out.loss.sec)) out = { lap, loss };
+  }
+  return out;
+}

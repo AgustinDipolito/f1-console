@@ -72,3 +72,15 @@ describe('comentarios bajo el volante', () => {
     expect(c.lines).toHaveLength(2);
   });
 });
+
+describe('avisos sin tono', () => {
+  it('note deja el renglón primero con info y una racha que llega después no lo reemplaza', () => {
+    const c = new Coach();
+    run(c, at('s'), at('b'));
+    c.note('Ataque: potencia Push, ERS Attack');
+    expect(c.lines[0]).toEqual({ text: 'Ataque: potencia Push, ERS Attack', good: false, info: true });
+    run(c, at('c'));
+    expect(c.lines[0].text).toMatch(/^Frenada justa/);
+    expect(c.lines[1].info).toBe(true);
+  });
+});

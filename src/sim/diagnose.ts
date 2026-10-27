@@ -68,7 +68,7 @@ function idealClock(tr: Track): (s: number) => number {
 }
 
 /** Tramos: tandas de registros seguidos del mismo tipo. */
-function splitRuns(n: number, tyOf: (k: number) => Seg): { run: number[]; start: number[] } {
+export function splitRuns(n: number, tyOf: (k: number) => Seg): { run: number[]; start: number[] } {
   const run: number[] = [], start: number[] = [];
   for (let k = 0; k < n; k++) { if (!k || tyOf(k) !== tyOf(k - 1)) start.push(k); run.push(start.length - 1); }
   return { run, start };
